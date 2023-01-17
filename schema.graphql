@@ -1,0 +1,37 @@
+type Access {
+  email: String
+  firstName: String
+  id: ID
+  lastName: String
+}
+
+type Company {
+  employees: [Employee!]
+  id: ID
+  industry: String
+  name: String
+}
+
+type Employee {
+  access: Access
+  address: String
+  company: Company
+  hiringDate: String
+  id: ID
+  job: Job
+  subordinates: [Employee!]
+  zipCode: String
+}
+
+type Job {
+  id: ID
+  name: String
+  salary: String
+}
+
+type Query {
+  companies: [Company!]
+  company(id: ID): Company
+  employee(id: ID): Employee
+  employees: [Employee!]
+}

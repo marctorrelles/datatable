@@ -1,0 +1,20 @@
+query GetEmployees {
+  employees {
+    access {
+      firstName
+      lastName
+    }
+    company {
+      name
+    }
+    subordinates {
+      access {
+        firstName
+        lastName
+      }
+    }
+    job {
+      name
+    }
+  }
+}
