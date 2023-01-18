@@ -1,7 +1,8 @@
 import { Projection } from '.'
 
-// Dear dev, this is a mess and quite under-performanet, made only for the sake of prototyping.
-// PLEASE DO NOT USE THIS CODE IN PRODUCTION.
+// WARNING!!!!
+// Dear dev, this is a mess and quite under - performant, made only for the sake of prototyping.
+// PLEASE DO NOT USE THIS CODE IN PRODUCTION!
 
 const getFieldsByPath = (
   fullPath: string,
@@ -23,35 +24,30 @@ const getFieldsByPath = (
     throw new Error('Oooops, error with some path.')
   }
 
-  const isArray = pathPart.endsWith('[]')
+  const dataPart = data[pathPart]
+  if (!dataPart) {
+    throw new Error('Data does not contain path: ' + fullPath)
+  }
+
+  const isArray = Array.isArray(dataPart)
+
   if (isArray) {
     if (accessedArray) {
+      // TODO: Check how to handle this, at it would mean having a third dimension on the table
       console.error({ pathPart, fullPath, previousPath, data, accessedArray })
       throw new Error(
         'Paths cannot have more than one array element. Path: ' + fullPath
       )
     }
 
-    const dataPart = data[pathPart.slice(0, -2)]
-
-    if (!dataPart) {
-      throw new Error('Data does not contain path: ' + fullPath)
-    } else if (Array.isArray(dataPart)) {
-      return dataPart.map(
-        (item: any) =>
-          getFieldsByPath(fullPath, currentPath, item, true) as string
-      )
-    } else {
-      throw new Error(
-        'The part of the path provided as an array is not.' + fullPath
-      )
-    }
+    return dataPart.map(
+      (item: any) =>
+        getFieldsByPath(fullPath, currentPath, item, true) as string
+    )
   } else {
     const dataPart = data[pathPart]
 
-    if (!dataPart) {
-      throw new Error('Data does not contain path: ' + fullPath)
-    } else if (typeof dataPart === 'object') {
+    if (typeof dataPart === 'object') {
       return getFieldsByPath(fullPath, currentPath, dataPart, false)
     } else if (dataPart) {
       return dataPart

@@ -1,5 +1,5 @@
 import { DocumentNode } from 'graphql'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from 'urql'
 import ColumnSelectorButton from './ColumnSelectorButton'
 import { Body, Cell, Head, Row, Table } from './components'
@@ -35,16 +35,15 @@ const DataTable = ({
   queryOptions,
   projections: initialProjections,
 }: Props) => {
+  const [{ fetching, error, data }] = useQuery({ query, ...queryOptions })
+
   const [projections, setProjections] = useState<Projection[]>(
     initialProjections.filter((projection) => projection.visible !== false)
   )
-
-  const [{ fetching, error, data }] = useQuery({ query, ...queryOptions })
-
-  if (fetching) return <p>Loading...</p>
-  if (error) return <p>Oh no... {error.message}</p>
-
-  const builtData: string[][] = getFieldsForColumns(projections, data)
+  const builtData: string[][] = useMemo(() => {
+    if (!data) return []
+    return getFieldsForColumns(projections, data)
+  }, [data, projections])
 
   return (
     <div className={styles.container}>
@@ -53,26 +52,30 @@ const DataTable = ({
         initialProjections={initialProjections}
         setCurrentProjections={setProjections}
       />
-      <Table>
-        <Head>
-          <Row isPair>
-            {projections.map((projection) => (
-              <Cell.Head key={projection.identifier}>
-                {projection.name}
-              </Cell.Head>
-            ))}
-          </Row>
-        </Head>
-        <Body>
-          {builtData.map((row, index) => (
-            <Row key={index} isPair={index % 2 === 0}>
-              {Object.values(row).map((value, index) => (
-                <Cell.Body key={index}>{value}</Cell.Body>
+      {fetching && <p>Loading...</p>}
+      {error && <p>Oh no... {error.message}</p>}
+      {!fetching && !error && (
+        <Table>
+          <Head>
+            <Row isPair>
+              {projections.map((projection) => (
+                <Cell.Head key={projection.identifier}>
+                  {projection.name}
+                </Cell.Head>
               ))}
             </Row>
-          ))}
-        </Body>
-      </Table>
+          </Head>
+          <Body>
+            {builtData.map((row, index) => (
+              <Row key={index} isPair={index % 2 === 0}>
+                {Object.values(row).map((value, index) => (
+                  <Cell.Body key={index}>{value}</Cell.Body>
+                ))}
+              </Row>
+            ))}
+          </Body>
+        </Table>
+      )}
     </div>
   )
 }
