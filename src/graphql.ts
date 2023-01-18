@@ -80,6 +80,7 @@ export const GetEmployeesDocument = gql`
     access {
       firstName
       lastName
+      email
     }
     company {
       name

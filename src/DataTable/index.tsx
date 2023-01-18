@@ -1,82 +1,80 @@
-import { AnyVariables, UseQueryResponse } from 'urql'
-import { useGetEmployeesQuery } from '../graphql'
-import Cell from './components/Cell'
-import Row from './components/Row'
-import Table from './components/Table'
-import getLeafs from './getLeafs'
+import { DocumentNode } from 'graphql'
+import { useState } from 'react'
+import { useQuery } from 'urql'
+import ColumnSelectorButton from './ColumnSelectorButton'
+import { Body, Cell, Head, Row, Table } from './components'
+import getFieldsForColumns from './getFieldsForColumns'
 import * as styles from './index.css'
 
-type Projection = {
+type Path =
+  | {
+      argsPath: string[]
+      method: (...args: any[]) => string
+    }
+  | {
+      path: string // TODO: type it better
+    }
+
+export type Projection = {
   name: string
-  path: string // TODO: type it better
+  identifier: string
   visible?: boolean // default: true
-}
+} & Path
 
-type Props<Data extends any, Variables extends AnyVariables> = {
-  response: UseQueryResponse<Data, Variables>
+type Pagination = 'cursor' | 'offset' | 'none'
+
+type Props = {
+  query: DocumentNode
+  queryOptions?: Record<string, any>
   projections: Projection[]
+  pagination: Pagination
 }
 
-const DataTable = <Data extends any, Variables extends AnyVariables>({
-  response,
-  projections,
-}: Props<Data, Variables>) => {
-  const [{ fetching, error, data }] = response
+const DataTable = ({
+  query,
+  queryOptions,
+  projections: initialProjections,
+}: Props) => {
+  const [projections, setProjections] = useState<Projection[]>(
+    initialProjections.filter((projection) => projection.visible !== false)
+  )
+
+  const [{ fetching, error, data }] = useQuery({ query, ...queryOptions })
 
   if (fetching) return <p>Loading...</p>
   if (error) return <p>Oh no... {error.message}</p>
 
-  // const leafs = getLeafs(accessibleData)
-  const header = projections.map((projection) => projection.name)
-  const builtData: string[][] = [] // TODO
+  const builtData: string[][] = getFieldsForColumns(projections, data)
 
   return (
     <div className={styles.container}>
+      <ColumnSelectorButton
+        currentProjections={projections}
+        initialProjections={initialProjections}
+        setCurrentProjections={setProjections}
+      />
       <Table>
-        <Row isPair>
-          {Object.values(header).map((value) => (
-            <Cell.Head>{value}</Cell.Head>
-          ))}
-        </Row>
-        {builtData.map((row, index) => (
-          <Row isPair={index % 2 === 0}>
-            {Object.values(row).map((value) => (
-              <Cell.Body>{value}</Cell.Body>
+        <Head>
+          <Row isPair>
+            {projections.map((projection) => (
+              <Cell.Head key={projection.identifier}>
+                {projection.name}
+              </Cell.Head>
             ))}
           </Row>
-        ))}
+        </Head>
+        <Body>
+          {builtData.map((row, index) => (
+            <Row key={index} isPair={index % 2 === 0}>
+              {Object.values(row).map((value, index) => (
+                <Cell.Body key={index}>{value}</Cell.Body>
+              ))}
+            </Row>
+          ))}
+        </Body>
       </Table>
     </div>
   )
 }
 
-const Wrapper = () => {
-  const response = useGetEmployeesQuery()
-
-  return (
-    <DataTable
-      response={response}
-      projections={[
-        {
-          name: 'Company',
-          path: 'employees[].company.name',
-        },
-        {
-          name: 'First Name',
-          path: 'employees[].access.firstName',
-        },
-        {
-          name: 'Last Name',
-          path: 'employees[].access.lastName',
-        },
-        {
-          name: 'Position',
-          path: 'employees[].job.name',
-        },
-      ]}
-    />
-  )
-}
-
-export default Wrapper
-// export default DataTable
+export default DataTable
