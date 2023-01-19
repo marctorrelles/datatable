@@ -1,51 +1,61 @@
 import DataTable from '../DataTable'
-import { GetEmployeesDocument } from '../graphql'
 
 const EmployeesTable = () => {
   return (
     <DataTable
-      query={GetEmployeesDocument}
-      queryOptions={{
-        variables: {},
-      }}
+      operation="employees"
       projections={[
         {
           name: 'Company',
-          identifier: 'company',
-          path: 'employees.company.name',
+          query: {
+            operation: 'employees',
+            fields: ['company', 'name'],
+          },
         },
         {
           name: 'First Name',
-          identifier: 'firstName',
-          path: 'employees.access.firstName',
+          query: {
+            operation: 'employees',
+            fields: ['access', 'firstName'],
+          },
           visible: false,
         },
         {
           name: 'Last Name',
-          identifier: 'lastName',
-          path: 'employees.access.lastName',
+          query: {
+            operation: 'employees',
+            fields: ['access', 'lastName'],
+          },
           visible: false,
         },
         {
           name: 'Full Name',
-          identifier: 'fullName',
-          argsPath: ['employees.access.firstName', 'employees.access.lastName'],
-          method: (firstName: string, lastName: string) =>
-            `${firstName} ${lastName}`,
+          query: {
+            operation: 'employees',
+            fields: [
+              ['access', 'firstName'],
+              ['access', 'lastName'],
+            ],
+            resolver: (firstName: string, lastName: string) =>
+              `${firstName} ${lastName}`,
+          },
         },
         {
           name: 'Position',
-          identifier: 'position',
-          path: 'employees.job.name',
+          query: {
+            operation: 'employees',
+            fields: ['job', 'name'],
+          },
         },
         {
           name: 'Email',
-          identifier: 'email',
-          path: 'employees.access.email',
+          query: {
+            operation: 'employees',
+            fields: ['access', 'email'],
+          },
           visible: false,
         },
       ]}
-      pagination="cursor"
     />
   )
 }

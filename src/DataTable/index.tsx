@@ -1,45 +1,48 @@
-import { DocumentNode } from 'graphql'
+import { Query as QueryOperation } from '../graphql'
 import { useMemo, useState } from 'react'
 import { useQuery } from 'urql'
 import ColumnSelectorButton from './ColumnSelectorButton'
 import { Body, Cell, Head, Row, Table } from './components'
 import getFieldsForColumns from './getFieldsForColumns'
 import * as styles from './index.css'
+import { buildQuery } from './buildQuery'
+
+type Operation = keyof QueryOperation
 
 type Path =
   | {
-      argsPath: string[]
-      method: (...args: any[]) => string
+      fields: string[][] // TODO: type it better
+      resolver: (...args: any[]) => string
     }
   | {
-      path: string // TODO: type it better
+      fields: string[] // TODO: type it better
     }
+
+export type Query = {
+  // TODO: Make operation just a string? Then it would not be typed but it's not ideal to have it as a dependency of the generated types...
+  operation: Operation
+} & Path
 
 export type Projection = {
   name: string
-  identifier: string
   visible?: boolean // default: true
-} & Path
-
-type Pagination = 'cursor' | 'offset' | 'none'
-
-type Props = {
-  query: DocumentNode
-  queryOptions?: Record<string, any>
-  projections: Projection[]
-  pagination: Pagination
+  query: Query
 }
 
-const DataTable = ({
-  query,
-  queryOptions,
-  projections: initialProjections,
-}: Props) => {
-  const [{ fetching, error, data }] = useQuery({ query, ...queryOptions })
+type Props = {
+  operation: Operation
+  projections: Projection[]
+}
 
+const DataTable = ({ operation, projections: initialProjections }: Props) => {
   const [projections, setProjections] = useState<Projection[]>(
     initialProjections.filter((projection) => projection.visible !== false)
   )
+
+  const query = buildQuery<Operation>(operation, projections)
+
+  const [{ fetching, error, data }] = useQuery({ query })
+
   const builtData: string[][] = useMemo(() => {
     if (!data) return []
     return getFieldsForColumns(projections, data)
@@ -59,9 +62,7 @@ const DataTable = ({
           <Head>
             <Row isPair>
               {projections.map((projection) => (
-                <Cell.Head key={projection.identifier}>
-                  {projection.name}
-                </Cell.Head>
+                <Cell.Head key={projection.name}>{projection.name}</Cell.Head>
               ))}
             </Row>
           </Head>

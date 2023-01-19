@@ -72,15 +72,15 @@ export default function getFieldsForColumns(
 
   projections.forEach((projection, projectionIndex) => {
     // Pffffff :not-proud-marc:
-    if ('argsPath' in projection) {
-      const { method, argsPath } = projection
-      const args = argsPath.map((path) => {
+    if ('fields' in projection) {
+      const { resolver, fields } = projection
+      const args = fields.map((path) => {
         const parts = getFieldsByPath(path, path, data) as string[]
         return parts
       })
       for (let index = 0; index < args[0].length; index++) {
         const currentArgs = args.map((arg) => arg[index])
-        newData[projectionIndex].push(method(...currentArgs))
+        newData[projectionIndex].push(resolver(...currentArgs))
       }
     } else {
       const parts = getFieldsByPath(
