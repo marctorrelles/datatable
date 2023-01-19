@@ -28,22 +28,15 @@ export const buildQuery = <Operation extends string>(
 ): DocumentNode => {
   const queryArray: string[] = []
 
-  projections.map((projection) => {
-    const { fields, operation } = projection.query
-    if (Array.isArray(fields.at(0))) {
-      // string[][]
-      fields.map((field) => {
-        queryArray.push(buildSubQuery(operation, field as string[]))
+  projections.forEach((projection) => {
+    if ('fieldsArray' in projection.query) {
+      projection.query.fieldsArray.forEach((fields) => {
+        queryArray.push(buildSubQuery(operation, fields))
       })
     } else {
-      queryArray.push(buildSubQuery(operation, fields as string[]))
+      queryArray.push(buildSubQuery(operation, projection.query.fields))
     }
   })
-
-  console.log(
-    queryArray.join(`
-  `)
-  )
 
   // TODO: Change DataTableDynamicQuery to whatever?
   return gql`

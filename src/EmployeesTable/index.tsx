@@ -8,14 +8,12 @@ const EmployeesTable = () => {
         {
           name: 'Company',
           query: {
-            operation: 'employees',
             fields: ['company', 'name'],
           },
         },
         {
           name: 'First Name',
           query: {
-            operation: 'employees',
             fields: ['access', 'firstName'],
           },
           visible: false,
@@ -23,7 +21,6 @@ const EmployeesTable = () => {
         {
           name: 'Last Name',
           query: {
-            operation: 'employees',
             fields: ['access', 'lastName'],
           },
           visible: false,
@@ -31,8 +28,7 @@ const EmployeesTable = () => {
         {
           name: 'Full Name',
           query: {
-            operation: 'employees',
-            fields: [
+            fieldsArray: [
               ['access', 'firstName'],
               ['access', 'lastName'],
             ],
@@ -43,14 +39,12 @@ const EmployeesTable = () => {
         {
           name: 'Position',
           query: {
-            operation: 'employees',
             fields: ['job', 'name'],
           },
         },
         {
           name: 'Email',
           query: {
-            operation: 'employees',
             fields: ['access', 'email'],
           },
           visible: false,

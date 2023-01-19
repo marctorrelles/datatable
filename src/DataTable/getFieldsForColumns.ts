@@ -1,17 +1,17 @@
-import { Projection } from '.'
+import { Operation, Projection } from '.'
 
 // WARNING!!!!
 // Dear dev, this is a mess and quite under - performant, made only for the sake of prototyping.
 // PLEASE DO NOT USE THIS CODE IN PRODUCTION!
 
 const getFieldsByPath = (
-  fullPath: string,
-  previousPath: string,
+  fullPath: string[],
+  previousPath: string[],
   data: any,
   accessedArray = false
 ): string[] | string | undefined => {
-  const pathPart = previousPath.split('.').at(0)
-  const currentPath = previousPath.split('.').slice(1).join('.')
+  const pathPart = previousPath.at(0)
+  const currentPath = previousPath.slice(1)
 
   if (!pathPart) {
     console.error('Oooops, error with some path.', {
@@ -65,27 +65,34 @@ const getFieldsByPath = (
 }
 
 export default function getFieldsForColumns(
+  operation: Operation,
   projections: Projection[],
   data: any
 ): string[][] {
   const newData = new Array(projections.length).fill([])
 
   projections.forEach((projection, projectionIndex) => {
-    // Pffffff :not-proud-marc:
-    if ('fields' in projection) {
-      const { resolver, fields } = projection
-      const args = fields.map((path) => {
-        const parts = getFieldsByPath(path, path, data) as string[]
+    if ('fieldsArray' in projection.query) {
+      const { resolver, fieldsArray } = projection.query
+
+      const args = (fieldsArray as string[][]).map((fields) => {
+        const parts = getFieldsByPath(
+          [operation, ...fields],
+          [operation, ...fields],
+          data
+        ) as string[]
         return parts
       })
+
       for (let index = 0; index < args[0].length; index++) {
         const currentArgs = args.map((arg) => arg[index])
         newData[projectionIndex].push(resolver(...currentArgs))
       }
     } else {
+      const { fields } = projection.query
       const parts = getFieldsByPath(
-        projection.path,
-        projection.path,
+        [operation, ...fields],
+        [operation, ...fields],
         data
       ) as string[]
       newData[projectionIndex] = parts

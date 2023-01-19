@@ -17,12 +17,12 @@ const ColumnSelectorButton = ({
         Visible fields (click to hide):{' '}
         {currentProjections.map((projection) => (
           <button
-            key={projection.identifier}
+            key={projection.name}
             onClick={() =>
               setCurrentProjections(
                 currentProjections.filter(
                   (currentProjection) =>
-                    currentProjection.identifier !== projection.identifier
+                    currentProjection.name !== projection.name
                 )
               )
             }
@@ -38,12 +38,12 @@ const ColumnSelectorButton = ({
             (projection) =>
               !currentProjections.some(
                 (currentProjection) =>
-                  currentProjection.identifier === projection.identifier
+                  currentProjection.name === projection.name
               )
           )
           .map((projection) => (
             <button
-              key={projection.identifier}
+              key={projection.name}
               onClick={() =>
                 setCurrentProjections([...currentProjections, projection])
               }

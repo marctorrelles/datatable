@@ -7,21 +7,16 @@ import getFieldsForColumns from './getFieldsForColumns'
 import * as styles from './index.css'
 import { buildQuery } from './buildQuery'
 
-type Operation = keyof QueryOperation
+export type Operation = keyof QueryOperation
 
-type Path =
+type Query =
   | {
-      fields: string[][] // TODO: type it better
+      fieldsArray: string[][] // TODO: type it better
       resolver: (...args: any[]) => string
     }
   | {
       fields: string[] // TODO: type it better
     }
-
-export type Query = {
-  // TODO: Make operation just a string? Then it would not be typed but it's not ideal to have it as a dependency of the generated types...
-  operation: Operation
-} & Path
 
 export type Projection = {
   name: string
@@ -44,9 +39,9 @@ const DataTable = ({ operation, projections: initialProjections }: Props) => {
   const [{ fetching, error, data }] = useQuery({ query })
 
   const builtData: string[][] = useMemo(() => {
-    if (!data) return []
-    return getFieldsForColumns(projections, data)
-  }, [data, projections])
+    if (!data || fetching || error) return []
+    return getFieldsForColumns(operation, projections, data)
+  }, [data, error, fetching, operation, projections])
 
   return (
     <div className={styles.container}>
