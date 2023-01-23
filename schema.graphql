@@ -33,5 +33,5 @@ type Query {
   companies: [Company!]
   company(id: ID): Company
   employee(id: ID): Employee
-  employees: [Employee!]
+  employees(first: Int): [Employee!]
 }

@@ -1,11 +1,11 @@
-import { Query as QueryOperation } from '../graphql'
 import { useMemo, useState } from 'react'
 import { useQuery } from 'urql'
+import { Query as QueryOperation } from '../graphql'
+import { useBuildQuery } from './useBuildQuery'
 import ColumnSelectorButton from './ColumnSelectorButton'
 import { Body, Cell, Head, Row, Table } from './components'
 import getFieldsForColumns from './getFieldsForColumns'
 import * as styles from './index.css'
-import { buildQuery } from './buildQuery'
 
 export type Operation = keyof QueryOperation
 
@@ -34,7 +34,7 @@ const DataTable = ({ operation, projections: initialProjections }: Props) => {
     initialProjections.filter((projection) => projection.visible !== false)
   )
 
-  const query = buildQuery<Operation>(operation, projections)
+  const query = useBuildQuery(operation, projections)
 
   const [{ fetching, error, data }] = useQuery({ query })
 

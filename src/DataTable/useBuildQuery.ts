@@ -1,4 +1,5 @@
 import { DocumentNode } from 'graphql'
+import { useMemo } from 'react'
 import { gql } from 'urql'
 import { Projection } from '.'
 
@@ -22,27 +23,25 @@ const buildSubQuery = (operation: string, fields: string[]) => {
 }`
 }
 
-export const buildQuery = <Operation extends string>(
+export const useBuildQuery = <Operation extends string>(
   operation: Operation,
   projections: Projection[]
 ): DocumentNode => {
-  const queryArray: string[] = []
+  return useMemo(
+    () => gql`
+    query DataTableDynamicQuery {
+      ${projections.map((projection) => {
+        if ('fieldsArray' in projection.query) {
+          return projection.query.fieldsArray
+            .map((fields) => buildSubQuery(operation, fields))
+            .join('\n')
+        }
 
-  projections.forEach((projection) => {
-    if ('fieldsArray' in projection.query) {
-      projection.query.fieldsArray.forEach((fields) => {
-        queryArray.push(buildSubQuery(operation, fields))
-      })
-    } else {
-      queryArray.push(buildSubQuery(operation, projection.query.fields))
+        return buildSubQuery(operation, projection.query.fields)
+      }).join(`
+    `)}
     }
-  })
-
-  // TODO: Change DataTableDynamicQuery to whatever?
-  return gql`
-  query DataTableDynamicQuery {
-    ${queryArray.join(`
-  `)}
-  }
-  `
+  `,
+    [operation, projections]
+  )
 }

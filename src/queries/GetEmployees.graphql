@@ -1,5 +1,5 @@
-query GetEmployees {
-  employees {
+query GetEmployees($first: Int) {
+  employees(first: $first) {
     access {
       firstName
       lastName

@@ -68,15 +68,22 @@ export type QueryEmployeeArgs = {
   id?: InputMaybe<Scalars['ID']>;
 };
 
-export type GetEmployeesQueryVariables = Exact<{ [key: string]: never; }>;
+
+export type QueryEmployeesArgs = {
+  first?: InputMaybe<Scalars['Int']>;
+};
+
+export type GetEmployeesQueryVariables = Exact<{
+  first?: InputMaybe<Scalars['Int']>;
+}>;
 
 
 export type GetEmployeesQuery = { __typename?: 'Query', employees?: Array<{ __typename?: 'Employee', access?: { __typename?: 'Access', firstName?: string | null, lastName?: string | null } | null, company?: { __typename?: 'Company', name?: string | null } | null, subordinates?: Array<{ __typename?: 'Employee', access?: { __typename?: 'Access', firstName?: string | null, lastName?: string | null } | null }> | null, job?: { __typename?: 'Job', name?: string | null } | null }> | null };
 
 
 export const GetEmployeesDocument = gql`
-    query GetEmployees {
-  employees {
+    query GetEmployees($first: Int) {
+  employees(first: $first) {
     access {
       firstName
       lastName
