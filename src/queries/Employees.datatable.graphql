@@ -1,0 +1,23 @@
+#import "./datatable.graphql"
+
+query EmployeesDataTable {
+  employees @dataSource {
+    access {
+      lastName @field(id: "accessLastName")
+      firstName @field(id: "accessFirstName")
+      email @field(id: "accessEmail")
+    }
+    company {
+      name @field(id: "companyName")
+    }
+    subordinates @field(id: "subordinates") {
+      access {
+        firstName
+        lastName
+      }
+    }
+    job {
+      name @field(id: "jobName")
+    }
+  }
+}

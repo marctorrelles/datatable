@@ -1,53 +1,35 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from 'urql'
-import { Query as QueryOperation } from '../graphql'
-import { useBuildQuery } from './useBuildQuery'
 import ColumnSelectorButton from './ColumnSelectorButton'
 import { Body, Cell, Head, Row, Table } from './components'
-import getFieldsForColumns from './getFieldsForColumns'
 import * as styles from './index.css'
-
-export type Operation = keyof QueryOperation
-
-type Query =
-  | {
-      fieldsArray: string[][] // TODO: type it better
-      resolver: (...args: any[]) => string
-    }
-  | {
-      fields: string[] // TODO: type it better
-    }
-
-export type Projection = {
-  name: string
-  visible?: boolean // default: true
-  query: Query
-}
+import { DataTableData, Projection } from '../datatable.graphql'
+import getFieldsForColumns from './getFieldsForColumns'
 
 type Props = {
-  operation: Operation
-  projections: Projection[]
+  data: DataTableData
 }
 
-const DataTable = ({ operation, projections: initialProjections }: Props) => {
+const DataTable = ({ data }: Props) => {
   const [projections, setProjections] = useState<Projection[]>(
-    initialProjections.filter((projection) => projection.visible !== false)
+    data.projections.filter((projection) => projection.visible !== false)
   )
 
-  const query = useBuildQuery(operation, projections)
+  const [{ fetching, error, data: queryData }] = useQuery({
+    query: data.query,
+    variables: data.variables,
+  })
 
-  const [{ fetching, error, data }] = useQuery({ query })
-
-  const builtData: string[][] = useMemo(() => {
-    if (!data || fetching || error) return []
-    return getFieldsForColumns(operation, projections, data)
-  }, [data, error, fetching, operation, projections])
+  const builtData = useMemo(() => {
+    if (!queryData || fetching || error) return []
+    return getFieldsForColumns(projections, queryData, data.resolvers)
+  }, [queryData, error, fetching, data.resolvers, projections])
 
   return (
     <div className={styles.container}>
       <ColumnSelectorButton
         currentProjections={projections}
-        initialProjections={initialProjections}
+        initialProjections={data.projections}
         setCurrentProjections={setProjections}
       />
       {fetching && <p>Loading...</p>}
@@ -57,7 +39,7 @@ const DataTable = ({ operation, projections: initialProjections }: Props) => {
           <Head>
             <Row isPair>
               {projections.map((projection) => (
-                <Cell.Head key={projection.name}>{projection.name}</Cell.Head>
+                <Cell.Head key={projection.title}>{projection.title}</Cell.Head>
               ))}
             </Row>
           </Head>

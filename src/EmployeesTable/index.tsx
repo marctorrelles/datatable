@@ -1,57 +1,59 @@
+import React from 'react'
 import DataTable from '../DataTable'
+import { useEmployeesDataTable } from '../datatable.graphql'
+import { Employee } from '../graphql'
 
-const EmployeesTable = () => {
+const Subordinates: React.FC<{ subordinates: Employee[] }> = ({
+  subordinates,
+}) => {
+  if (subordinates.length === 0) return <span>None :'(</span>
+
   return (
-    <DataTable
-      operation="employees"
-      projections={[
-        {
-          name: 'Company',
-          query: {
-            fields: ['company', 'name'],
-          },
-        },
-        {
-          name: 'First Name',
-          query: {
-            fields: ['access', 'firstName'],
-          },
-          visible: false,
-        },
-        {
-          name: 'Last Name',
-          query: {
-            fields: ['access', 'lastName'],
-          },
-          visible: false,
-        },
-        {
-          name: 'Full Name',
-          query: {
-            fieldsArray: [
-              ['access', 'firstName'],
-              ['access', 'lastName'],
-            ],
-            resolver: (firstName: string, lastName: string) =>
-              `${firstName} ${lastName}`,
-          },
-        },
-        {
-          name: 'Position',
-          query: {
-            fields: ['job', 'name'],
-          },
-        },
-        {
-          name: 'Email',
-          query: {
-            fields: ['access', 'email'],
-          },
-          visible: false,
-        },
-      ]}
-    />
+    <span style={{ color: 'green' }}>
+      {subordinates
+        .map((sub) => `${sub.access?.firstName} ${sub.access?.lastName}`)
+        .join(', ')}
+    </span>
   )
 }
 
-export default EmployeesTable
+const NewEmployeesTable = () => {
+  const data = useEmployeesDataTable([
+    {
+      title: 'First Name',
+      field: 'firstName',
+      visible: false,
+    },
+    {
+      title: 'Last Name',
+      field: 'lastName',
+      visible: false,
+    },
+    {
+      title: 'Full Name',
+      fields: ['firstName', 'lastName'],
+      render: (firstName: string, lastName: string) =>
+        `${firstName} ${lastName}`,
+    },
+    {
+      title: 'Position',
+      field: 'jobName',
+    },
+    {
+      title: 'Email',
+      field: 'email',
+    },
+    {
+      title: 'Subordinates',
+      field: 'subordinates',
+      render: (subordinates: Employee[]) => (
+        <Subordinates subordinates={subordinates} />
+      ),
+      visible: false,
+    },
+  ])
+
+  return <DataTable data={data} />
+}
+
+export default NewEmployeesTable

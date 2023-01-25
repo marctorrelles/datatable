@@ -1,9 +1,14 @@
-import { Projection } from '..'
+import { Projection } from '../../datatable.graphql'
 
 type Props = {
   currentProjections: Projection[]
   initialProjections: Projection[]
   setCurrentProjections: (projections: Projection[]) => void
+}
+
+const getProjectionKey = (projection: Projection) => {
+  if ('field' in projection) return projection.field
+  return projection.fields.join('')
 }
 
 const ColumnSelectorButton = ({
@@ -17,17 +22,18 @@ const ColumnSelectorButton = ({
         Visible fields (click to hide):{' '}
         {currentProjections.map((projection) => (
           <button
-            key={projection.name}
+            key={getProjectionKey(projection)}
             onClick={() =>
               setCurrentProjections(
                 currentProjections.filter(
                   (currentProjection) =>
-                    currentProjection.name !== projection.name
+                    getProjectionKey(currentProjection) !==
+                    getProjectionKey(projection)
                 )
               )
             }
           >
-            {projection.name}
+            {projection.title}
           </button>
         ))}
       </div>
@@ -38,17 +44,18 @@ const ColumnSelectorButton = ({
             (projection) =>
               !currentProjections.some(
                 (currentProjection) =>
-                  currentProjection.name === projection.name
+                  getProjectionKey(currentProjection) ===
+                  getProjectionKey(projection)
               )
           )
           .map((projection) => (
             <button
-              key={projection.name}
+              key={getProjectionKey(projection)}
               onClick={() =>
                 setCurrentProjections([...currentProjections, projection])
               }
             >
-              {projection.name}
+              {projection.title}
             </button>
           ))}
       </div>

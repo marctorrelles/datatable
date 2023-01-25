@@ -1,5 +1,6 @@
 schema: ../datatable-api/schema.faker.graphql
-documents: 'src/queries/**/*.graphql'
+documents:
+  - 'src/queries/**/*.graphql'
 generates:
   ./src/graphql.ts:
     plugins:
@@ -8,6 +9,14 @@ generates:
       - typescript-urql
     config:
       withHooks: true
+    documents:
+      - '!src/queries/**/*.datatable.graphql'
   ./schema.graphql:
     plugins:
       - schema-ast
+    documents:
+      - '!src/queries/**/*.datatable.graphql'
+  # TODO: Write plugin when we have the whole picture
+  # ./src/graphql.datatable.ts:
+  #   - datatable-codegen-plugin.js:
+  #       documents: '**/*.datatable.graphql'
