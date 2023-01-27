@@ -1,4 +1,4 @@
-schema: ../datatable-api/schema.faker.graphql
+schema: api/schema.faker.graphql
 documents:
   - 'src/queries/**/*.graphql'
 generates:
