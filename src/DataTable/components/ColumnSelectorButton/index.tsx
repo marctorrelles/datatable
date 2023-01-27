@@ -1,4 +1,4 @@
-import { Projection } from '../../datatable.graphql'
+import { Projection } from '../../../datatable.graphql'
 
 type Props<T> = {
   currentProjections: Projection<T>[]

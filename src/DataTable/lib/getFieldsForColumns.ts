@@ -1,5 +1,5 @@
 import { ReactNode } from 'react'
-import { DataTableData, Projection } from '../datatable.graphql'
+import { DataTableData, Projection } from '../../datatable.graphql'
 
 export default function getFieldsForColumns<T>(
   projections: Projection<T>[],

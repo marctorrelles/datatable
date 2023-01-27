@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from 'urql'
-import ColumnSelectorButton from './ColumnSelectorButton'
+import ColumnSelectorButton from './components/ColumnSelectorButton'
 import { Body, Cell, Head, Row, Table } from './components'
 import * as styles from './index.css'
 import { DataTableData, Projection } from '../datatable.graphql'
-import getFieldsForColumns from './getFieldsForColumns'
+import getFieldsForColumns from './lib/getFieldsForColumns'
 
 type Props<T> = {
   data: DataTableData<T>
@@ -27,8 +27,8 @@ function DataTable<T>({ data }: Props<T>) {
 
   const builtData = useMemo(() => {
     if (!queryData || fetching || error) return []
-    return getFieldsForColumns(projections, queryData, data.resolvers)
-  }, [queryData, error, fetching, data.resolvers, projections])
+    return getFieldsForColumns(projections, queryData, resolvers)
+  }, [queryData, error, fetching, resolvers, projections])
 
   return (
     <div className={styles.container}>
