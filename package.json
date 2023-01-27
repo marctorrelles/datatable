@@ -25,6 +25,7 @@
     "@vanilla-extract/webpack-plugin": "^2.2.0",
     "graphql": "^16.6.0",
     "graphql-tag": "^2.12.6",
+    "plugin-helpers": "link:@types/@graphql-codegen/plugin-helpers",
     "prettier": "^2.8.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -52,6 +53,11 @@
     ]
   },
   "devDependencies": {
+    "@graphql-codegen/client-preset": "^1.2.6",
+    "@graphql-codegen/plugin-helpers": "^3.1.2",
+    "@graphql-codegen/urql-introspection": "^2.2.1",
+    "@graphql-typed-document-node/core": "^3.1.1",
+    "babel-preset-react-app": "^10.0.1",
     "concurrently": "^7.6.0",
     "minimatch": "^6.1.6"
   }
