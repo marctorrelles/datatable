@@ -1,45 +1,47 @@
-import { ReactNode, useMemo } from 'react'
+import { ReactNode, useMemo, useState } from 'react'
 import { AnyVariables, gql } from 'urql'
 import { Employee, Exact, Maybe, Scalars } from './graphql'
 
 /**
  * Generic types and utils here
  */
-export type DataTableData = {
+export type DataTableData<T> = {
   variables: AnyVariables
   query: any
-  projections: Projection[]
+  projections: Projection<T>[]
+  visibleProjections: Projection<T>[]
+  setProjections: (projections: Projection<T>[]) => void
   resolvers: {
     main: (data: any) => any
-    fields: {
-      [key: string]: (data: any) => any
-    }
+    fields: Exact<Record<keyof T, (data: any) => any>>
   }
 }
 
-// TODO: This should be typed properly!
-export type Projection = {
+interface ProjectionArgs<T, F extends (keyof T)[]> {
   title: string
-  visible?: boolean // default: true
-} & (
-  | {
-      field: keyof EmployeesDataTableFields // TODO: generic typing
-      render?: (value: any) => ReactNode
-    }
-  | {
-      fields: Array<keyof EmployeesDataTableFields> // TODO: generic typing
-      render: (...value: any[]) => ReactNode
-    }
-)
-
-export type DataTableConfig = {
-  projections: Projection[]
-  data: DataTableData
+  visible?: boolean
+  fields: F
+  render?: (object: Pick<T, F[number]>) => ReactNode
 }
 
-const getVariables = (
+function projection<T>(args: ProjectionArgs<T, (keyof T)[]>) {
+  return args
+}
+
+export type ProjectionBuiler<T> = (
+  args: ProjectionArgs<T, (keyof T)[]>
+) => typeof args
+
+export type Projection<T> = ReturnType<ProjectionBuiler<T>>
+
+export type DataTableConfig<T> = {
+  projections: Projection<T>[]
+  data: DataTableData<T>
+}
+
+const getVariables = <T>(
   queryIncludesArray: string[] | readonly string[],
-  projections: Projection[]
+  projections: Projection<T>[]
 ) => {
   const variablesObject = [...queryIncludesArray].reduce(
     (memo, key) => ({
@@ -50,20 +52,12 @@ const getVariables = (
   ) as EmployeesDataTableQueryVariables
 
   projections.forEach((projection) => {
-    if ('fields' in projection) {
-      projection.fields.forEach((field) => {
-        const key = `include${field[0].toUpperCase()}${field.slice(
-          1
-        )}` as keyof typeof variablesObject
-        variablesObject[key] = true
-      })
-    } else {
-      const key =
-        `include${projection.field[0].toUpperCase()}${projection.field.slice(
-          1
-        )}` as keyof typeof variablesObject
+    projection.fields.forEach((field) => {
+      const key = `include${(field as string)[0].toUpperCase()}${(
+        field as string
+      ).slice(1)}` as keyof typeof variablesObject
       variablesObject[key] = true
-    }
+    })
   })
 
   return variablesObject
@@ -105,17 +99,13 @@ export const EmployeesDataTableDocument = gql`
     $includeJobName: Boolean!
   ) {
     employees {
-      access @include(if: $includeFirstName) {
-        firstName
+      access {
+        firstName @include(if: $includeFirstName)
+        lastName @include(if: $includeLastName)
+        email @include(if: $includeEmail)
       }
-      access @include(if: $includeLastName) {
-        lastName
-      }
-      access @include(if: $includeEmail) {
-        email
-      }
-      company @include(if: $includeCompanyName) {
-        name
+      company {
+        name @include(if: $includeCompanyName)
       }
       subordinates @include(if: $includeSubordinates) {
         access {
@@ -143,7 +133,7 @@ export type EmployeesDataTableQueryVariables = Exact<{
   [key in (typeof EmployeesDataTableQueryIncludes)[number]]: boolean
 }>
 
-export type EmployeesDataTableFields = {
+export interface EmployeesDataTableFields {
   firstName: Maybe<Scalars['String']>
   lastName: Maybe<Scalars['String']>
   email: Maybe<Scalars['String']>
@@ -151,6 +141,12 @@ export type EmployeesDataTableFields = {
   subordinates: Maybe<Array<Employee>>
   jobName: Maybe<Scalars['String']>
 }
+
+export const employeesProjection = <
+  F extends (keyof EmployeesDataTableFields)[]
+>(
+  args: ProjectionArgs<EmployeesDataTableFields, F>
+) => projection<EmployeesDataTableFields>(args)
 
 export const EmployeesDataTableFieldsResolvers = {
   main: (data: EmployeesDataTableQuery) => data.employees, // This gives us the amount of rows
@@ -176,17 +172,28 @@ export const EmployeesDataTableFieldsResolvers = {
 }
 
 export function useEmployeesDataTable(
-  projections: Projection[]
-): DataTableData {
+  projections: Projection<EmployeesDataTableFields>[]
+): DataTableData<EmployeesDataTableFields> {
+  // NOTE: Not sure net two things should be on hook level or on the table level
+  const [visibleProjections, setProjections] = useState<
+    Projection<EmployeesDataTableFields>[]
+  >(projections.filter((projection) => projection.visible !== false))
+
   const variables = useMemo(
-    () => getVariables(EmployeesDataTableQueryIncludes, projections),
-    [projections]
+    () =>
+      getVariables<EmployeesDataTableFields>(
+        EmployeesDataTableQueryIncludes,
+        visibleProjections
+      ),
+    [visibleProjections]
   )
 
   return {
     query: EmployeesDataTableDocument,
     variables,
     projections,
+    visibleProjections,
+    setProjections,
     resolvers: EmployeesDataTableFieldsResolvers,
   }
 }

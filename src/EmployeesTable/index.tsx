@@ -1,9 +1,13 @@
 import React from 'react'
 import DataTable from '../DataTable'
-import { useEmployeesDataTable } from '../datatable.graphql'
+import {
+  employeesProjection,
+  projection,
+  useEmployeesDataTable,
+} from '../datatable.graphql'
 import { Employee } from '../graphql'
 
-const Subordinates: React.FC<{ subordinates: Employee[] }> = ({
+const Subordinates: React.FC<{ subordinates: Employee[] | null }> = ({
   subordinates,
 }) => {
   if (subordinates.length === 0) return <span>None :'(</span>
@@ -19,38 +23,42 @@ const Subordinates: React.FC<{ subordinates: Employee[] }> = ({
 
 const NewEmployeesTable = () => {
   const data = useEmployeesDataTable([
-    {
+    employeesProjection({
       title: 'First Name',
-      field: 'firstName',
+      fields: ['firstName'],
       visible: false,
-    },
-    {
+    }),
+    employeesProjection({
       title: 'Last Name',
-      field: 'lastName',
+      fields: ['lastName'],
       visible: false,
-    },
-    {
+    }),
+    employeesProjection({
+      title: 'Company',
+      fields: ['companyName'],
+    }),
+    employeesProjection({
       title: 'Full Name',
       fields: ['firstName', 'lastName'],
-      render: (firstName: string, lastName: string) =>
-        `${firstName} ${lastName}`,
-    },
-    {
+      render: ({ firstName, lastName }) => `${firstName} ${lastName}`,
+    }),
+    employeesProjection({
       title: 'Position',
-      field: 'jobName',
-    },
-    {
+      fields: ['jobName'],
+    }),
+    employeesProjection({
       title: 'Email',
-      field: 'email',
-    },
-    {
+      fields: ['email'],
+      render: ({ email }) => email,
+    }),
+    employeesProjection({
       title: 'Subordinates',
-      field: 'subordinates',
-      render: (subordinates: Employee[]) => (
+      fields: ['subordinates'],
+      render: ({ subordinates }) => (
         <Subordinates subordinates={subordinates} />
       ),
       visible: false,
-    },
+    }),
   ])
 
   return <DataTable data={data} />
