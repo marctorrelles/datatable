@@ -1,30 +1,29 @@
 import { ReactNode } from 'react'
 import { DataTableData, Projection } from '../datatable.graphql'
 
-export default function getFieldsForColumns(
-  projections: Projection[],
+export default function getFieldsForColumns<T>(
+  projections: Projection<T>[],
   data: any,
-  resolvers: DataTableData['resolvers']
+  resolvers: DataTableData<T>['resolvers']
 ): ReactNode[][] {
   const main = resolvers.main(data)
   const resolvedData: ReactNode[][] = []
 
   main.forEach((item: any) => {
     const fields = projections.map((projection) => {
-      if ('fields' in projection) {
-        const fields = projection.fields.map((field) => {
-          return resolvers.fields[field](item)
-        })
+      const fields = projection.fields.reduce(
+        (memo, field) => ({
+          ...memo,
+          [field]: resolvers.fields[field](item),
+        }),
+        {}
+      )
 
-        return projection.render(...fields)
-      } else {
-        const field = resolvers.fields[projection.field](item)
-
-        if (projection.render) {
-          return projection.render(field)
-        }
-        return field
+      if (projection.render) {
+        return projection.render({ ...fields } as Pick<T, keyof T>)
       }
+
+      return Object.values(fields).join(', ')
     })
 
     resolvedData.push(fields)

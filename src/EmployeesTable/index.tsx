@@ -2,7 +2,6 @@ import React from 'react'
 import DataTable from '../DataTable'
 import {
   employeesProjection,
-  projection,
   useEmployeesDataTable,
 } from '../datatable.graphql'
 import { Employee } from '../graphql'
@@ -10,7 +9,8 @@ import { Employee } from '../graphql'
 const Subordinates: React.FC<{ subordinates: Employee[] | null }> = ({
   subordinates,
 }) => {
-  if (subordinates.length === 0) return <span>None :'(</span>
+  console.log('subordinates', subordinates)
+  if (!subordinates || subordinates.length === 0) return <span>None :'(</span>
 
   return (
     <span style={{ color: 'green' }}>

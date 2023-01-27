@@ -8,8 +8,8 @@ import { Employee, Exact, Maybe, Scalars } from './graphql'
 export type DataTableData<T> = {
   variables: AnyVariables
   query: any
+  initialProjections: Projection<T>[]
   projections: Projection<T>[]
-  visibleProjections: Projection<T>[]
   setProjections: (projections: Projection<T>[]) => void
   resolvers: {
     main: (data: any) => any
@@ -172,27 +172,27 @@ export const EmployeesDataTableFieldsResolvers = {
 }
 
 export function useEmployeesDataTable(
-  projections: Projection<EmployeesDataTableFields>[]
+  initialProjections: Projection<EmployeesDataTableFields>[]
 ): DataTableData<EmployeesDataTableFields> {
   // NOTE: Not sure net two things should be on hook level or on the table level
-  const [visibleProjections, setProjections] = useState<
+  const [projections, setProjections] = useState<
     Projection<EmployeesDataTableFields>[]
-  >(projections.filter((projection) => projection.visible !== false))
+  >(initialProjections.filter((projection) => projection.visible !== false))
 
   const variables = useMemo(
     () =>
       getVariables<EmployeesDataTableFields>(
         EmployeesDataTableQueryIncludes,
-        visibleProjections
+        projections
       ),
-    [visibleProjections]
+    [projections]
   )
 
   return {
     query: EmployeesDataTableDocument,
     variables,
+    initialProjections,
     projections,
-    visibleProjections,
     setProjections,
     resolvers: EmployeesDataTableFieldsResolvers,
   }

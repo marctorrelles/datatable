@@ -6,18 +6,23 @@ import * as styles from './index.css'
 import { DataTableData, Projection } from '../datatable.graphql'
 import getFieldsForColumns from './getFieldsForColumns'
 
-type Props = {
-  data: DataTableData
+type Props<T> = {
+  data: DataTableData<T>
 }
 
-const DataTable = ({ data }: Props) => {
-  const [projections, setProjections] = useState<Projection[]>(
-    data.projections.filter((projection) => projection.visible !== false)
-  )
+function DataTable<T>({ data }: Props<T>) {
+  const {
+    query,
+    variables,
+    projections,
+    setProjections,
+    initialProjections,
+    resolvers,
+  } = data
 
   const [{ fetching, error, data: queryData }] = useQuery({
-    query: data.query,
-    variables: data.variables,
+    query: query,
+    variables: variables,
   })
 
   const builtData = useMemo(() => {
@@ -29,7 +34,7 @@ const DataTable = ({ data }: Props) => {
     <div className={styles.container}>
       <ColumnSelectorButton
         currentProjections={projections}
-        initialProjections={data.projections}
+        initialProjections={initialProjections}
         setCurrentProjections={setProjections}
       />
       {fetching && <p>Loading...</p>}
