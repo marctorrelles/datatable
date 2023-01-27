@@ -1,0 +1,11 @@
+{
+  "name": "datatable-api",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "graphql-faker schema.faker.graphql"
+  },
+  "author": "marctorrelles",
+  "dependencies": {
+    "graphql-faker": "^2.0.0-rc.25"
+  }
+}
