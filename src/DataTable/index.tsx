@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useQuery } from 'urql'
-import ColumnSelectorButton from './components/ColumnSelectorButton'
+import { DataTableData } from '../datatable.graphql'
 import { Body, Cell, Head, Row, Table } from './components'
+import ColumnSelectorButton from './components/ColumnSelectorButton'
 import * as styles from './index.css'
-import { DataTableData, Projection } from '../datatable.graphql'
 import getFieldsForColumns from './lib/getFieldsForColumns'
 
 type Props<T> = {
