@@ -1,4 +1,4 @@
-import { Employee } from './graphql'
+import { Employee } from './generated/graphql'
 
 // Below here goes to the static generated thingie
 import gql from 'graphql-tag'

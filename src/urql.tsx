@@ -1,6 +1,6 @@
 import { createClient, dedupExchange, fetchExchange, Provider } from 'urql'
 
-const API_ENDPOINT = process.env.API_ENDPOINT || 'http://localhost:9002/graphql'
+const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:9002/graphql'
 
 const client = createClient({
   url: API_ENDPOINT,

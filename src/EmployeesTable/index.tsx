@@ -4,7 +4,7 @@ import {
   employeesProjection,
   useEmployeesDataTable,
 } from '../datatable.graphql'
-import { Employee } from '../graphql'
+import { Employee } from '../generated/graphql'
 
 const Subordinates: React.FC<{ subordinates: Employee[] | null }> = ({
   subordinates,
