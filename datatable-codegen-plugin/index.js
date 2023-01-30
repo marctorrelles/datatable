@@ -13,12 +13,13 @@ const { execSync } = require('child_process')
 
 module.exports = {
   async plugin(schema, documents, config) {
-    execSync(
-      'mkdir -p tmp && cp datatable-codegen-plugin/plugin.ts tmp/datatable-codegen-plugin.ts'
-    )
-    execSync('npx tsc tmp/datatable-codegen-plugin.ts')
+    execSync(`
+      mkdir -p tmp/datatable-codegen-plugin
+      find datatable-codegen-plugin -name \\*.ts -exec cp -prv '{}' 'tmp/datatable-codegen-plugin' ';'
+      npx tsc --esModuleInterop --target esnext --moduleResolution node tmp/datatable-codegen-plugin/plugin.ts
+    `)
 
-    const { plugin } = require('../tmp/datatable-codegen-plugin.js')
+    const { plugin } = require('../tmp/datatable-codegen-plugin/plugin.js')
 
     return plugin(schema, documents, config)
   },

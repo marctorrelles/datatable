@@ -10,10 +10,12 @@ importers:
       '@graphql-codegen/client-preset': ^1.2.6
       '@graphql-codegen/plugin-helpers': ^3.1.2
       '@graphql-codegen/schema-ast': ^2.5.1
+      '@graphql-codegen/typed-document-node': ^2.3.12
       '@graphql-codegen/typescript': ^2.7.3
-      '@graphql-codegen/typescript-operations': ^2.2.1
+      '@graphql-codegen/typescript-operations': ^2.5.12
       '@graphql-codegen/typescript-urql': ^3.7.3
       '@graphql-codegen/urql-introspection': ^2.2.1
+      '@graphql-codegen/visitor-plugin-common': ^2.13.7
       '@graphql-typed-document-node/core': ^3.1.1
       '@testing-library/jest-dom': ^5.16.5
       '@testing-library/react': ^13.4.0
@@ -24,6 +26,7 @@ importers:
       '@types/react-dom': ^18.0.10
       '@vanilla-extract/css': ^1.9.2
       '@vanilla-extract/webpack-plugin': ^2.2.0
+      auto-bind: ^4.0.0
       babel-preset-react-app: ^10.0.1
       concurrently: ^7.6.0
       graphql: ^16.6.0
@@ -43,7 +46,6 @@ importers:
       '@graphql-codegen/cli': 2.16.4_2snu444j7k4paxz7nr4onunwvi
       '@graphql-codegen/schema-ast': 2.6.1_graphql@16.6.0
       '@graphql-codegen/typescript': 2.8.7_graphql@16.6.0
-      '@graphql-codegen/typescript-operations': 2.5.12_graphql@16.6.0
       '@graphql-codegen/typescript-urql': 3.7.3_sy4knu3obj4ys7pjcqbyfxmqle
       '@testing-library/jest-dom': 5.16.5
       '@testing-library/react': 13.4.0_biqbaboplfbrettd7655fr4n2y
@@ -67,8 +69,12 @@ importers:
     devDependencies:
       '@graphql-codegen/client-preset': 1.2.6_graphql@16.6.0
       '@graphql-codegen/plugin-helpers': 3.1.2_graphql@16.6.0
+      '@graphql-codegen/typed-document-node': 2.3.12_graphql@16.6.0
+      '@graphql-codegen/typescript-operations': 2.5.12_graphql@16.6.0
       '@graphql-codegen/urql-introspection': 2.2.1_graphql@16.6.0
+      '@graphql-codegen/visitor-plugin-common': 2.13.7_graphql@16.6.0
       '@graphql-typed-document-node/core': 3.1.1_graphql@16.6.0
+      auto-bind: 4.0.0
       babel-preset-react-app: 10.0.1
       concurrently: 7.6.0
       minimatch: 6.1.6
@@ -2020,6 +2026,7 @@ packages:
     transitivePeerDependencies:
       - encoding
       - supports-color
+    dev: true
 
   /@graphql-codegen/typescript-urql/3.7.3_sy4knu3obj4ys7pjcqbyfxmqle:
     resolution: {integrity: sha512-ndb3C/IZeLaZXI24OEQZnJ7OgzZJvBdw1xnU/ohL6/lMcC5xQgxHBpqM10MZgfTc9l9Ip7qZVCVQk3I4cvcGrA==}

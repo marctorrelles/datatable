@@ -203,7 +203,7 @@ export const EmployeesDataTableFieldsResolvers = {
 export function useEmployeesDataTable(
   initialProjections: Projection<EmployeesDataTableFields>[]
 ): DataTableData<EmployeesDataTableFields> {
-  // NOTE: Not sure net two things should be on hook level or on the table level
+  // NOTE: Move these next two to table level
   const [projections, setProjections] = useState<
     Projection<EmployeesDataTableFields>[]
   >(initialProjections.filter((projection) => projection.visible !== false))

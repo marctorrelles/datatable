@@ -1,6 +1,6 @@
 #import "./datatable.graphql"
 
-query EmployeesDataTable {
+query Employees2DataTable {
   employees @dataSource {
     access {
       lastName @dataField(id: "accessLastName")
