@@ -43,13 +43,11 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
   TypeScriptDocumentNodesVisitorPluginConfig,
   ClientSideBasePluginConfig
 > {
-  private pluginConfig: TypeScriptDocumentNodesVisitorPluginConfig
   dataSource: DataSource
   dataFields: DataField[] = []
 
   constructor(
     schema: GraphQLSchema,
-    // TODO: Recieve only one document to be able to iterate easier!
     documents: Types.DocumentFile[]
   ) {
     super(
@@ -59,31 +57,12 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
         documentMode: DocumentMode.documentNodeImportFragments,
         documentNodeImport:
           '@graphql-typed-document-node/core#TypedDocumentNode',
-        ...config,
       },
       {},
       documents
     )
 
-    this.pluginConfig = config
-
     autoBind(this)
-
-    // We need to make sure it's there because in this mode, the base plugin doesn't add the import
-    if (this.config.documentMode === DocumentMode.graphQLTag) {
-      const documentNodeImport = this._parseImport(
-        this.config.documentNodeImport || 'graphql#DocumentNode'
-      )
-      const tagImport = this._generateImport(
-        documentNodeImport,
-        'DocumentNode',
-        true
-      )
-
-      if (tagImport) {
-        this._imports.add(tagImport)
-      }
-    }
   }
 
   public SelectionSet(node, _, parent) {
@@ -159,26 +138,8 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
     }
   }
 
-  protected getDocumentNodeSignature(
-    resultType: string,
-    variablesTypes: string,
-    node
-  ) {
-    if (
-      this.config.documentMode === DocumentMode.documentNode ||
-      this.config.documentMode === DocumentMode.documentNodeImportFragments ||
-      this.config.documentMode === DocumentMode.graphQLTag
-    ) {
-      return ` as unknown as DocumentNode<${resultType}, ${variablesTypes}>`
-    }
-
-    return super.getDocumentNodeSignature(resultType, variablesTypes, node)
-  }
-
-  protected generateIncludeName = (field: FieldNode) => {
-    return `include${field.name.value[0].toUpperCase()}${field.name.value.slice(
-      1
-    )}`
+  protected generateIncludeName = ({ name }: FieldNode) => {
+    return `include${name.value[0].toUpperCase()}${name.value.slice(1)}`
   }
 
   public getIncludedArrays = () => {

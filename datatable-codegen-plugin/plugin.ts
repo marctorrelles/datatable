@@ -5,7 +5,6 @@ import {
 } from '@graphql-codegen/plugin-helpers'
 import { plugin as pluginTypeScript } from '@graphql-codegen/typescript'
 import { plugin as pluginOperations } from '@graphql-codegen/typescript-operations'
-import { optimizeOperations } from '@graphql-codegen/visitor-plugin-common'
 import { concatAST, DocumentNode, GraphQLSchema } from 'graphql'
 import { TypeScriptDocumentNodesVisitor } from './datatable-visitor'
 
@@ -94,7 +93,6 @@ export const plugin: PluginFunction = async (
 ) => {
   const typeScript = await pluginTypeScript(schema, documents, config)
   const operations = await pluginOperations(schema, documents, config)
-  // const documentNode = await pluginDocumentNode(schema, documents, config)
 
   const { prepend: prependTypeScript, content: contentTypeScript } =
     typeof typeScript === 'string' ? { prepend: '', content: null } : typeScript
@@ -106,16 +104,27 @@ export const plugin: PluginFunction = async (
   // get gql`myQuery` and change it
   // TODO: Iterate through documents so the output is clearer
   const allAst = concatAST(documents.map((v) => v.document as DocumentNode))
+  const visitorPrepend =
+    allAst.definitions.length === 0 ? [] : new TypeScriptDocumentNodesVisitor(schema, documents).getImports()
+
+  const definitions = documents.map(({document}) => {
+    if (!document) return null
+
+    const visitorResult = oldVisit(concatAST([document]), { leave: visitor as any })
+    const visitorDefinitions = visitorResult.definitions
+      .filter((t) => typeof t === 'string')
+      .join('\n')
+
+    const visitor = new TypeScriptDocumentNodesVisitor(schema, documents)
+
+    return [
+      visitorDefinitions,
+      visitor.getIncludedArrays()
+    ].join('\n')
+  }).filter(Boolean)
 
   // TODO: Add support for fragments?
-  const visitor = new TypeScriptDocumentNodesVisitor(schema, documents)
-  const visitorResult = oldVisit(allAst, { leave: visitor as any })
 
-  const visitorPrepend =
-    allAst.definitions.length === 0 ? [] : visitor.getImports()
-  const visitorDefinitions = visitorResult.definitions
-    .filter((t) => typeof t === 'string')
-    .join('\n')
   // End visitor!
 
   return {
@@ -129,8 +138,8 @@ export const plugin: PluginFunction = async (
       STATIC_GENERATED_CODE,
       contentTypeScript,
       contentOperations,
-      visitorDefinitions,
-      visitor.getIncludedArrays(),
+      definitions,
+      definitions.map(def => def.getIncludedArrays()).join(\n),
     ]
       .filter(Boolean)
       .join('\n'),
