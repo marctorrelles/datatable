@@ -5,12 +5,13 @@ import {
 } from '@graphql-codegen/plugin-helpers'
 import { plugin as pluginTypeScript } from '@graphql-codegen/typescript'
 import { plugin as pluginOperations } from '@graphql-codegen/typescript-operations'
-import { concatAST, DocumentNode, GraphQLSchema } from 'graphql'
+import { ClientSideBaseVisitor } from '@graphql-codegen/visitor-plugin-common'
+import { concatAST, DocumentNode, GraphQLSchema, print } from 'graphql'
 import { TypeScriptDocumentNodesVisitor } from './datatable-visitor'
 
 const IMPORTS = `
-import gql from 'graphql-tag'
 import { ReactNode, useMemo, useState } from 'react'
+import type { DocumentNode } from 'graphql'
 `
 
 const STATIC_GENERATED_CODE = `
@@ -86,13 +87,83 @@ const normalizePrepend = (prependContent: string | string[] | undefined) => {
   return [prependContent]
 }
 
+const visitorPrepend = (
+  schema: GraphQLSchema,
+  documents: Types.DocumentFile[]
+) => {
+  const allAst = concatAST(documents.map((v) => v.document as DocumentNode))
+  const visitor = new ClientSideBaseVisitor(
+    schema,
+    [],
+    {},
+    {},
+    documents.map((d) => d.document as Types.DocumentFile)
+  )
+  return allAst.definitions.length === 0 ? [] : visitor.getImports()
+}
+
+// TODO: Check if there's a proper way of doing this? 🤯
+const buildQuery = (
+  visitor: TypeScriptDocumentNodesVisitor,
+  visitorNode: any,
+  document: Types.DocumentFile
+) => {
+  if (!document.document) return null
+
+  const definition = visitorNode.definitions[0]
+  const node = definition.slice(
+    definition.indexOf('{'),
+    definition.lastIndexOf('}') + 1
+  )
+  return `export const ${visitor.documentName} = gql\`
+${print(JSON.parse(node))}
+\``
+}
+
+function buildQueryIncludes(visitor: TypeScriptDocumentNodesVisitor) {
+  return `export const ${visitor.queryName}Includes = [${visitor.dataFields.map(
+    ({ field }) => `\n  '${visitor.generateIncludeName(field)}'`
+  )},
+] as const`
+}
+
+const buildqueryVariablesType = (visitor: TypeScriptDocumentNodesVisitor) => {
+  return `export type ${visitor.queryName}Variables = Exact<{
+  [key in (typeof ${visitor.queryName}Includes)[number]]: boolean
+}>`
+}
+
+const generateContent = (
+  schema: GraphQLSchema,
+  documents: Types.DocumentFile[]
+) => {
+  return documents.map((document) => {
+    if (!document.document) return null
+
+    // Doing the visitor thingie here for performance, even it could be done on each method
+    const visitor = new TypeScriptDocumentNodesVisitor(schema, document)
+
+    const visitorNode = oldVisit(document.document, {
+      leave: visitor as any,
+    })
+
+    return [
+      buildQuery(visitor, visitorNode, document),
+      buildQueryIncludes(visitor),
+      buildqueryVariablesType(visitor),
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+  })
+}
+
 export const plugin: PluginFunction = async (
   schema: GraphQLSchema,
   documents: Types.DocumentFile[],
-  config: any
+  _config: any
 ) => {
-  const typeScript = await pluginTypeScript(schema, documents, config)
-  const operations = await pluginOperations(schema, documents, config)
+  const typeScript = await pluginTypeScript(schema, documents, {})
+  const operations = await pluginOperations(schema, documents, {})
 
   const { prepend: prependTypeScript, content: contentTypeScript } =
     typeof typeScript === 'string' ? { prepend: '', content: null } : typeScript
@@ -100,46 +171,22 @@ export const plugin: PluginFunction = async (
   const { prepend: prependOperations, content: contentOperations } =
     typeof operations === 'string' ? { prepend: '', content: null } : operations
 
-  // Start visitor!
-  // get gql`myQuery` and change it
-  // TODO: Iterate through documents so the output is clearer
-  const allAst = concatAST(documents.map((v) => v.document as DocumentNode))
-  const visitorPrepend =
-    allAst.definitions.length === 0 ? [] : new TypeScriptDocumentNodesVisitor(schema, documents).getImports()
-
-  const definitions = documents.map(({document}) => {
-    if (!document) return null
-
-    const visitorResult = oldVisit(concatAST([document]), { leave: visitor as any })
-    const visitorDefinitions = visitorResult.definitions
-      .filter((t) => typeof t === 'string')
-      .join('\n')
-
-    const visitor = new TypeScriptDocumentNodesVisitor(schema, documents)
-
-    return [
-      visitorDefinitions,
-      visitor.getIncludedArrays()
-    ].join('\n')
-  }).filter(Boolean)
+  const customContent = generateContent(schema, documents)
 
   // TODO: Add support for fragments?
-
-  // End visitor!
 
   return {
     prepend: [
       IMPORTS,
       ...normalizePrepend(prependTypeScript),
       ...normalizePrepend(prependOperations),
-      ...visitorPrepend,
+      ...visitorPrepend(schema, documents),
     ],
     content: [
       STATIC_GENERATED_CODE,
       contentTypeScript,
       contentOperations,
-      definitions,
-      definitions.map(def => def.getIncludedArrays()).join(\n),
+      ...customContent,
     ]
       .filter(Boolean)
       .join('\n'),

@@ -1,7 +1,7 @@
-import { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/core';
+import gql from 'graphql-tag';
 
-import gql from 'graphql-tag'
 import { ReactNode, useMemo, useState } from 'react'
+import type { DocumentNode } from 'graphql'
 
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
@@ -146,7 +146,39 @@ export type EmployeesDataTableQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type EmployeesDataTableQuery = { __typename?: 'Query', employees?: Array<{ __typename?: 'Employee', access?: { __typename?: 'Access', lastName?: string | null, firstName?: string | null, email?: string | null } | null, company?: { __typename?: 'Company', name?: string | null } | null, subordinates?: Array<{ __typename?: 'Employee', access?: { __typename?: 'Access', firstName?: string | null, lastName?: string | null } | null }> | null, job?: { __typename?: 'Job', name?: string | null } | null }> | null };
 
-export const EmployeesDataTableDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"EmployeesDataTable"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"employees"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"access"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"lastName"},"directives":[{"kind":"Directive","name":{"kind":"Name","value":"includeLastName"}}]},{"kind":"Field","name":{"kind":"Name","value":"firstName"},"directives":[{"kind":"Directive","name":{"kind":"Name","value":"includeFirstName"}}]},{"kind":"Field","name":{"kind":"Name","value":"email"},"directives":[{"kind":"Directive","name":{"kind":"Name","value":"includeEmail"}}]}]}},{"kind":"Field","name":{"kind":"Name","value":"company"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"},"directives":[{"kind":"Directive","name":{"kind":"Name","value":"includeName"}}]}]}},{"kind":"Field","name":{"kind":"Name","value":"subordinates"},"directives":[{"kind":"Directive","name":{"kind":"Name","value":"includeSubordinates"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"access"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"firstName"}},{"kind":"Field","name":{"kind":"Name","value":"lastName"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"job"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"},"directives":[{"kind":"Directive","name":{"kind":"Name","value":"includeName"}}]}]}}]}}]}}]} as unknown as DocumentNode;
+export const EmployeesDataTableDocument = gql`
+query EmployeesDataTable($includeLastName: Boolean!, $includeFirstName: Boolean!, $includeEmail: Boolean!, $includeName: Boolean!, $includeName: Boolean!, $includeSubordinates: Boolean!) {
+  employees {
+    access {
+      lastName @include(if: $includeLastName)
+      firstName @include(if: $includeFirstName)
+      email @include(if: $includeEmail)
+    }
+    company {
+      name @include(if: $includeName)
+    }
+    subordinates @include(if: $includeSubordinates) {
+      access {
+        firstName
+        lastName
+      }
+    }
+    job {
+      name @include(if: $includeName)
+    }
+  }
+}
+`
 
-accessLastName,accessFirstName,accessEmail,companyName,jobName,subordinates
-    
+export const EmployeesDataTableIncludes = [
+  'includeLastName',
+  'includeFirstName',
+  'includeEmail',
+  'includeName',
+  'includeName',
+  'includeSubordinates',
+] as const
+
+export type EmployeesDataTableVariables = Exact<{
+  [key in (typeof EmployeesDataTableIncludes)[number]]: boolean
+}>
