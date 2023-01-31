@@ -9,7 +9,12 @@ tasks:
     command: |
       echo REACT_APP_API_ENDPOINT=$(gp url 9002)/graphql > .env
       pnpm start
+
 ports:
   - name: GraphQL Faker
     port: 9002
     visibility: public
+
+vscode:
+  extensions:
+   - esbenp.prettier-vscode
