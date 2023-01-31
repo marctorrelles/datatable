@@ -1,27 +1,29 @@
+import { ReactNode, useRef } from 'react'
 import gql from 'graphql-tag';
-
-import { ReactNode, useMemo, useState } from 'react'
-import type { DocumentNode } from 'graphql'
-
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
 
-export type AnyVariables =
-  | {
-      [prop: string]: any
-    }
-  | void
-  | undefined
+type AnyVariables = { [prop: string]: any } | void | undefined
 
-export type DataTableData<T> = {
-  variables: AnyVariables
+type RemoveArrayAndNull<T> = T extends Array<any>
+  ? NonNullable<T[number]>
+  : NonNullable<T>
+
+type RevealType<T extends string[], U> = T extends [infer First, ...infer Rest]
+  ? Rest extends string[]
+    ? First extends keyof U
+      ? RevealType<Rest, RemoveArrayAndNull<U[First]>>
+      : never
+    : never
+  : U | null | undefined // TODO: Is this null or undefined assumption always true?
+
+type DataTableData<T> = {
+  getVariables: (args: any) => AnyVariables
   query: any
-  initialProjections: Projection<T>[]
   projections: Projection<T>[]
-  setProjections: (projections: Projection<T>[]) => void
   resolvers: {
     main: (data: any) => any
     fields: Exact<Record<keyof T, (data: any) => any>>
@@ -39,16 +41,11 @@ function projection<T>(args: ProjectionArgs<T, (keyof T)[]>) {
   return args
 }
 
-export type ProjectionBuiler<T> = (
+type ProjectionBuiler<T> = (
   args: ProjectionArgs<T, (keyof T)[]>
 ) => typeof args
 
 export type Projection<T> = ReturnType<ProjectionBuiler<T>>
-
-export type DataTableConfig<T> = {
-  projections: Projection<T>[]
-  data: DataTableData<T>
-}
 
 const getVariables = <T>(
   queryIncludesArray: string[] | readonly string[],
@@ -146,7 +143,7 @@ export type EmployeesDataTableQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type EmployeesDataTableQuery = { __typename?: 'Query', employees?: Array<{ __typename?: 'Employee', access?: { __typename?: 'Access', lastName?: string | null, firstName?: string | null, email?: string | null } | null, company?: { __typename?: 'Company', name?: string | null } | null, subordinates?: Array<{ __typename?: 'Employee', access?: { __typename?: 'Access', firstName?: string | null, lastName?: string | null } | null }> | null, job?: { __typename?: 'Job', name?: string | null } | null }> | null };
 
-export const EmployeesDataTableDocument = gql`
+const EmployeesDataTableDocument = gql`
 query EmployeesDataTable($includeLastName: Boolean!, $includeFirstName: Boolean!, $includeEmail: Boolean!, $includeName: Boolean!, $includeName: Boolean!, $includeSubordinates: Boolean!) {
   employees {
     access {
@@ -170,7 +167,7 @@ query EmployeesDataTable($includeLastName: Boolean!, $includeFirstName: Boolean!
 }
 `
 
-export const EmployeesDataTableIncludes = [
+const EmployeesDataTableIncludes = [
   'includeLastName',
   'includeFirstName',
   'includeEmail',
@@ -179,6 +176,60 @@ export const EmployeesDataTableIncludes = [
   'includeSubordinates',
 ] as const
 
-export type EmployeesDataTableVariables = Exact<{
-  [key in (typeof EmployeesDataTableIncludes)[number]]: boolean
-}>
+type EmployeesDataTableMainType = RemoveArrayAndNull<
+  EmployeesDataTableQuery['employees']
+>
+
+interface EmployeesDataTableFields {
+  accessLastName: RevealType<['subordinates', 'access', 'lastName'], EmployeesDataTableMainType>
+  accessFirstName: RevealType<['subordinates', 'access', 'firstName'], EmployeesDataTableMainType>
+  accessEmail: RevealType<['access', 'email'], EmployeesDataTableMainType>
+  companyName: RevealType<['job', 'name'], EmployeesDataTableMainType>
+  jobName: RevealType<['job', 'name'], EmployeesDataTableMainType>
+  subordinates: RevealType<['subordinates'], EmployeesDataTableMainType>
+}
+
+const EmployeesDataTableFieldsResolvers = {
+  main: (data: EmployeesDataTableQuery) => data.employees,
+  fields: {
+    accessLastName: (
+      main: NonNullable<EmployeesDataTableQuery['employees']>[number]
+    ) => main.subordinates?.access?.lastName,
+    accessFirstName: (
+      main: NonNullable<EmployeesDataTableQuery['employees']>[number]
+    ) => main.subordinates?.access?.firstName,
+    accessEmail: (
+      main: NonNullable<EmployeesDataTableQuery['employees']>[number]
+    ) => main.access?.email,
+    companyName: (
+      main: NonNullable<EmployeesDataTableQuery['employees']>[number]
+    ) => main.job?.name,
+    jobName: (
+      main: NonNullable<EmployeesDataTableQuery['employees']>[number]
+    ) => main.job?.name,
+    subordinates: (
+      main: NonNullable<EmployeesDataTableQuery['employees']>[number]
+    ) => main.subordinates,
+  }
+}
+
+export const employeesProjection = <F extends (keyof EmployeesDataTableFields)[]>(
+  args: ProjectionArgs<EmployeesDataTableFields, F>
+) => projection<EmployeesDataTableFields>(args)
+
+export function useEmployeesDataTable(
+  projections: Projection<EmployeesDataTableFields>[]
+): DataTableData<EmployeesDataTableFields> {
+  const getEmployeesDataTableVariables = useRef(
+    (projections: Array<Projection<EmployeesDataTableFields>>) => (
+      getVariables<EmployeesDataTableFields>(EmployeesDataTableIncludes, projections)
+    )
+  ).current
+
+  return {
+    query: EmployeesDataTableDocument,
+    getVariables: getEmployeesDataTableVariables,
+    projections,
+    resolvers: EmployeesDataTableFieldsResolvers,
+  }
+}

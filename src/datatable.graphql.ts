@@ -2,7 +2,7 @@ import { Employee } from './generated/graphql'
 
 // Below here goes to the static generated thingie
 import gql from 'graphql-tag'
-import { ReactNode, useMemo, useState } from 'react'
+import { ReactNode, useCallback, useMemo, useRef, useState } from 'react'
 
 /**
  * Generic types and utils here
@@ -27,19 +27,24 @@ export type Scalars = {
   Int: number
   Float: number
 }
-export type AnyVariables =
-  | {
-      [prop: string]: any
-    }
-  | void
-  | undefined
+export type AnyVariables = { [prop: string]: any } | void | undefined
+
+type RemoveArrayAndNull<T> = T extends Array<any>
+  ? NonNullable<T[number]>
+  : NonNullable<T>
+
+type RevealType<T extends string[], U> = T extends [infer First, ...infer Rest]
+  ? Rest extends string[]
+    ? First extends keyof U
+      ? RevealType<Rest, RemoveArrayAndNull<U[First]>>
+      : never
+    : never
+  : U | null | undefined // TODO: Is this null or undefined assumption always true?
 
 export type DataTableData<T> = {
-  variables: AnyVariables
+  getVariables: (args: any) => AnyVariables
   query: any
-  initialProjections: Projection<T>[]
   projections: Projection<T>[]
-  setProjections: (projections: Projection<T>[]) => void
   resolvers: {
     main: (data: any) => any
     fields: Exact<Record<keyof T, (data: any) => any>>
@@ -162,8 +167,15 @@ export type EmployeesDataTableQueryVariables = Exact<{
   [key in (typeof EmployeesDataTableQueryIncludes)[number]]: boolean
 }>
 
+export type EmployeesDataTableQueryMainType = RemoveArrayAndNull<
+  EmployeesDataTableQuery['employees']
+>
+
 export interface EmployeesDataTableFields {
-  firstName: Maybe<Scalars['String']>
+  firstName: RevealType<
+    ['access', 'firstName'],
+    EmployeesDataTableQueryMainType
+  >
   lastName: Maybe<Scalars['String']>
   email: Maybe<Scalars['String']>
   companyName: Maybe<Scalars['String']>
@@ -178,7 +190,7 @@ export const employeesProjection = <
 ) => projection<EmployeesDataTableFields>(args)
 
 export const EmployeesDataTableFieldsResolvers = {
-  main: (data: EmployeesDataTableQuery) => data.employees, // This gives us the amount of rows
+  main: (data: EmployeesDataTableQuery) => data.employees,
   fields: {
     firstName: (
       main: NonNullable<EmployeesDataTableQuery['employees']>[number]
@@ -201,28 +213,20 @@ export const EmployeesDataTableFieldsResolvers = {
 }
 
 export function useEmployeesDataTable(
-  initialProjections: Projection<EmployeesDataTableFields>[]
+  projections: Projection<EmployeesDataTableFields>[]
 ): DataTableData<EmployeesDataTableFields> {
-  // NOTE: Move these next two to table level
-  const [projections, setProjections] = useState<
-    Projection<EmployeesDataTableFields>[]
-  >(initialProjections.filter((projection) => projection.visible !== false))
-
-  const variables = useMemo(
-    () =>
+  const getEmployeesDataTableVariables = useRef(
+    (projections: Array<Projection<EmployeesDataTableFields>>) =>
       getVariables<EmployeesDataTableFields>(
         EmployeesDataTableQueryIncludes,
         projections
-      ),
-    [projections]
-  )
+      )
+  ).current
 
   return {
     query: EmployeesDataTableDocument,
-    variables,
-    initialProjections,
+    getVariables: getEmployeesDataTableVariables,
     projections,
-    setProjections,
     resolvers: EmployeesDataTableFieldsResolvers,
   }
 }

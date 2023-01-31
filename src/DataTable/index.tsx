@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from 'urql'
-import { DataTableData } from '../datatable.graphql'
+import { DataTableData, Projection } from '../generated/datatable.graphql'
 import { Body, Cell, Head, Row, Table } from './components'
 import ColumnSelectorButton from './components/ColumnSelectorButton'
+import { getVariables } from './getVariables'
 import * as styles from './index.css'
 import getFieldsForColumns from './lib/getFieldsForColumns'
 
@@ -13,12 +14,20 @@ type Props<T> = {
 function DataTable<T>({ data }: Props<T>) {
   const {
     query,
-    variables,
-    projections,
-    setProjections,
-    initialProjections,
+    getVariables,
+    projections: initialProjections,
     resolvers,
   } = data
+
+  // NOTE: Move these next two to table level
+  const [projections, setProjections] = useState<Projection<T>[]>(
+    initialProjections.filter((projection) => projection.visible !== false)
+  )
+
+  const variables = useMemo(
+    () => getVariables(projections),
+    [getVariables, projections]
+  )
 
   const [{ fetching, error, data: queryData }] = useQuery({
     query: query,

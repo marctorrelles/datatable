@@ -9,25 +9,27 @@ import { ClientSideBaseVisitor } from '@graphql-codegen/visitor-plugin-common'
 import { concatAST, DocumentNode, GraphQLSchema, print } from 'graphql'
 import { TypeScriptDocumentNodesVisitor } from './datatable-visitor'
 
-const IMPORTS = `
-import { ReactNode, useMemo, useState } from 'react'
-import type { DocumentNode } from 'graphql'
-`
+const IMPORTS = `import { ReactNode, useRef } from 'react'`
 
 const STATIC_GENERATED_CODE = `
-export type AnyVariables =
-  | {
-      [prop: string]: any
-    }
-  | void
-  | undefined
+type AnyVariables = { [prop: string]: any } | void | undefined
 
-export type DataTableData<T> = {
-  variables: AnyVariables
+type RemoveArrayAndNull<T> = T extends Array<any>
+  ? NonNullable<T[number]>
+  : NonNullable<T>
+
+type RevealType<T extends string[], U> = T extends [infer First, ...infer Rest]
+  ? Rest extends string[]
+    ? First extends keyof U
+      ? RevealType<Rest, RemoveArrayAndNull<U[First]>>
+      : never
+    : never
+  : U | null | undefined // TODO: Is this null or undefined assumption always true?
+
+type DataTableData<T> = {
+  getVariables: (args: any) => AnyVariables
   query: any
-  initialProjections: Projection<T>[]
   projections: Projection<T>[]
-  setProjections: (projections: Projection<T>[]) => void
   resolvers: {
     main: (data: any) => any
     fields: Exact<Record<keyof T, (data: any) => any>>
@@ -45,16 +47,11 @@ function projection<T>(args: ProjectionArgs<T, (keyof T)[]>) {
   return args
 }
 
-export type ProjectionBuiler<T> = (
+type ProjectionBuiler<T> = (
   args: ProjectionArgs<T, (keyof T)[]>
 ) => typeof args
 
 export type Projection<T> = ReturnType<ProjectionBuiler<T>>
-
-export type DataTableConfig<T> = {
-  projections: Projection<T>[]
-  data: DataTableData<T>
-}
 
 const getVariables = <T>(
   queryIncludesArray: string[] | readonly string[],
@@ -115,22 +112,89 @@ const buildQuery = (
     definition.indexOf('{'),
     definition.lastIndexOf('}') + 1
   )
-  return `export const ${visitor.documentName} = gql\`
+  return `const ${visitor.documentName} = gql\`
 ${print(JSON.parse(node))}
 \``
 }
 
 function buildQueryIncludes(visitor: TypeScriptDocumentNodesVisitor) {
-  return `export const ${visitor.queryName}Includes = [${visitor.dataFields.map(
+  return `const ${visitor.queryName}Includes = [${visitor.dataFields.map(
     ({ field }) => `\n  '${visitor.generateIncludeName(field)}'`
   )},
 ] as const`
 }
 
-const buildqueryVariablesType = (visitor: TypeScriptDocumentNodesVisitor) => {
-  return `export type ${visitor.queryName}Variables = Exact<{
-  [key in (typeof ${visitor.queryName}Includes)[number]]: boolean
-}>`
+const buildMainType = (visitor: TypeScriptDocumentNodesVisitor) => {
+  const generic = visitor.mainFieldTree.reduce((prev, current) => {
+    const currentString = `['${current}']`
+
+    if (prev.length) {
+      return `RemoveArrayAndNull<${prev}>${currentString}`
+    }
+
+    return `${visitor.queryName}Query${currentString}`
+  }, '')
+  return `type ${visitor.queryName}MainType = RemoveArrayAndNull<
+  ${generic}
+>`
+}
+
+const buildFields = (visitor: TypeScriptDocumentNodesVisitor) => {
+  return `interface ${visitor.queryName}Fields {
+  ${visitor.fieldsTrees
+    .map((fieldStrings, index) => {
+      return `${visitor.dataFields[index].id}: RevealType<[${fieldStrings
+        .map((field) => `'${field}'`)
+        .join(', ')}], ${visitor.queryName}MainType>`
+    })
+    .join('\n  ')}
+}`
+}
+
+const buildProjection = (visitor: TypeScriptDocumentNodesVisitor) => {
+  return `export const ${visitor.dataSource.field.name.value}Projection = <F extends (keyof ${visitor.queryName}Fields)[]>(
+  args: ProjectionArgs<${visitor.queryName}Fields, F>
+) => projection<${visitor.queryName}Fields>(args)`
+}
+
+const buildFieldsResolvers = (visitor: TypeScriptDocumentNodesVisitor) => {
+  const mainArg = `NonNullable<${visitor.queryName}Query[${visitor.mainFieldTree
+    .map((f) => `'${f}'`)
+    .join(', ')}]>[number]`
+
+  return `const EmployeesDataTableFieldsResolvers = {
+  main: (data: ${visitor.queryName}Query) => data.${visitor.mainFieldTree.join(
+    '.'
+  )},
+  fields: {
+${visitor.fieldsTrees
+  .map((field, index) => {
+    return `    ${visitor.dataFields[index].id}: (
+      main: ${mainArg}
+    ) => main.${field.join('?.')},`
+  })
+  .join('\n')}
+  }
+}`
+}
+
+const buildHook = (visitor: TypeScriptDocumentNodesVisitor) => {
+  return `export function use${visitor.queryName}(
+  projections: Projection<${visitor.queryName}Fields>[]
+): DataTableData<${visitor.queryName}Fields> {
+  const get${visitor.queryName}Variables = useRef(
+    (projections: Array<Projection<${visitor.queryName}Fields>>) => (
+      getVariables<${visitor.queryName}Fields>(${visitor.queryName}Includes, projections)
+    )
+  ).current
+
+  return {
+    query: ${visitor.queryName}Document,
+    getVariables: get${visitor.queryName}Variables,
+    projections,
+    resolvers: ${visitor.queryName}FieldsResolvers,
+  }
+}`
 }
 
 const generateContent = (
@@ -150,7 +214,11 @@ const generateContent = (
     return [
       buildQuery(visitor, visitorNode, document),
       buildQueryIncludes(visitor),
-      buildqueryVariablesType(visitor),
+      buildMainType(visitor),
+      buildFields(visitor),
+      buildFieldsResolvers(visitor),
+      buildProjection(visitor),
+      buildHook(visitor),
     ]
       .filter(Boolean)
       .join('\n\n')

@@ -28,7 +28,6 @@ import autoBind from 'auto-bind'
 import {
   ASTNode,
   DirectiveNode,
-  DocumentNode,
   FieldNode,
   GraphQLSchema,
   Kind,
@@ -37,25 +36,23 @@ import {
   SelectionSetNode,
   VariableDefinitionNode,
 } from 'graphql'
-import fs from 'fs'
 
 interface TypeScriptDocumentNodesVisitorPluginConfig
   extends RawClientSideBasePluginConfig {
   addTypenameToSelectionSets?: boolean
 }
 
-type DataSource = SelectionNode
-
 type DataField = {
   id: string
   field: FieldNode
+  parent: ASTNode | ASTNode[] | undefined
 }
 
 export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
   TypeScriptDocumentNodesVisitorPluginConfig,
   ClientSideBasePluginConfig
 > {
-  dataSource: DataSource
+  dataSource: Omit<DataField, 'id'>
   dataFields: DataField[] = []
   document: Types.DocumentFile
 
@@ -112,15 +109,15 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
   public SelectionSet(
     node: ASTNode,
     _key: string | number | undefined,
-    _parent: ASTNode | ASTNode[] | undefined
+    parent: ASTNode | ASTNode[] | undefined
   ) {
     if (node.kind !== Kind.SELECTION_SET) return
 
     const newSelections = node.selections.map((selection) => {
       let newSelection = selection
 
-      newSelection = this.transformDataFieldDirective(selection)
-      newSelection = this.removeDataSourceDirective(newSelection)
+      newSelection = this.transformDataFieldDirective(selection, parent)
+      newSelection = this.removeDataSourceDirective(newSelection, parent)
 
       return newSelection
     })
@@ -131,19 +128,75 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
     }
   }
 
+  get mainOperation() {
+    return this.document.document?.definitions[0] as OperationDefinitionNode
+  }
+
   get queryName() {
-    return (
-      (this.document.document?.definitions[0] as OperationDefinitionNode).name
-        ?.value ?? ''
-    )
+    return this.mainOperation.name?.value ?? ''
   }
 
   get documentName() {
     return this.queryName.concat('Document')
   }
 
+  get mainFieldTree() {
+    const [, tree] = this.traverseUntilNode(
+      this.mainOperation.selectionSet.selections,
+      this.dataSource.field
+    )
+
+    return tree
+      .map((el) => el.kind === Kind.FIELD && el.name.value)
+      .filter(Boolean) as string[]
+  }
+
+  get fieldsTrees() {
+    return this.dataFields.map(({ field }) => {
+      const [, tree] = this.traverseUntilNode([this.dataSource.field], field)
+
+      return tree
+        .map((el) => el.kind === Kind.FIELD && el.name.value)
+        .filter(Boolean)
+        .slice(1) as string[]
+    })
+  }
+
   public generateIncludeName = ({ name }: FieldNode) => {
     return `include${name.value[0].toUpperCase()}${name.value.slice(1)}`
+  }
+
+  private traverseUntilNode = (
+    startingSelections: readonly SelectionNode[],
+    untilNode: FieldNode,
+    prev: SelectionNode[] = []
+  ): [SelectionNode | null, SelectionNode[]] => {
+    let matchingNode: SelectionNode | null = null
+    let newPrev = prev
+
+    startingSelections.forEach((selection) => {
+      if ('name' in selection) {
+        if (selection.name.value === untilNode.name.value) {
+          matchingNode = selection
+          newPrev = [...prev, selection]
+        } else {
+          if ('selectionSet' in selection && selection.selectionSet) {
+            const [matchingNodeResult, prevResult] = this.traverseUntilNode(
+              selection.selectionSet.selections,
+              untilNode,
+              [...prev, selection]
+            )
+
+            if (matchingNodeResult) {
+              matchingNode = matchingNodeResult
+              newPrev = prevResult
+            }
+          }
+        }
+      }
+    })
+
+    return [matchingNode, newPrev]
   }
 
   private validateQuery = () => {
@@ -161,7 +214,8 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
   }
 
   private transformDataFieldDirective = (
-    selection: SelectionNode
+    selection: SelectionNode,
+    parent: ASTNode | ASTNode[] | undefined
   ): SelectionNode => {
     if (!selection.directives) return selection
 
@@ -188,6 +242,7 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
     this.dataFields.push({
       id: idArgument.value.value,
       field: selection,
+      parent,
     })
 
     const newDirective: DirectiveNode = {
@@ -223,7 +278,10 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
     }
   }
 
-  private removeDataSourceDirective = (selection: SelectionNode) => {
+  private removeDataSourceDirective = (
+    selection: SelectionNode,
+    parent: ASTNode | ASTNode[] | undefined
+  ) => {
     if (!selection.directives) return selection
 
     const directive = selection.directives.find(
@@ -237,7 +295,10 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
     }
 
     if (!this.dataSource) {
-      this.dataSource = selection
+      this.dataSource = {
+        field: selection,
+        parent,
+      }
     } else {
       throw new Error(
         'You cannot have more than one @dataSource directive in the same query'
