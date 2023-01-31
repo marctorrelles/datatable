@@ -21,7 +21,7 @@ type RemoveArrayAndNull<T> = T extends Array<any>
 type RevealType<T extends string[], U> = T extends [infer First, ...infer Rest]
   ? Rest extends string[]
     ? First extends keyof U
-      ? RevealType<Rest, RemoveArrayAndNull<U[First]>>
+      ? RevealType<Rest, NonNullable<U[First]>>
       : never
     : never
   : U | null | undefined // TODO: Is this null or undefined assumption always true?
@@ -119,7 +119,7 @@ ${print(JSON.parse(node))}
 
 function buildQueryIncludes(visitor: TypeScriptDocumentNodesVisitor) {
   return `const ${visitor.queryName}Includes = [${visitor.dataFields.map(
-    ({ field }) => `\n  '${visitor.generateIncludeName(field)}'`
+    ({ id }) => `\n  '${visitor.generateIncludeName(id)}'`
   )},
 ] as const`
 }
@@ -153,7 +153,9 @@ const buildFields = (visitor: TypeScriptDocumentNodesVisitor) => {
 }
 
 const buildProjection = (visitor: TypeScriptDocumentNodesVisitor) => {
-  return `export const ${visitor.dataSource.field.name.value}Projection = <F extends (keyof ${visitor.queryName}Fields)[]>(
+  const lowercaseQueryName =
+    visitor.queryName[0].toLowerCase() + visitor.queryName.slice(1)
+  return `export const ${lowercaseQueryName}Projection = <F extends (keyof ${visitor.queryName}Fields)[]>(
   args: ProjectionArgs<${visitor.queryName}Fields, F>
 ) => projection<${visitor.queryName}Fields>(args)`
 }
@@ -165,7 +167,7 @@ const buildFieldsResolvers = (visitor: TypeScriptDocumentNodesVisitor) => {
     .map((f) => `'${f}'`)
     .join(', ')}]>[number]`
 
-  return `const EmployeesDataTableFieldsResolvers = {
+  return `const ${visitor.queryName}FieldsResolvers = {
   main: (data: ${
     visitor.queryName
   }Query) => data.${visitor.dataSource.fullPath.join('.')},
@@ -204,28 +206,32 @@ const generateContent = (
   schema: GraphQLSchema,
   documents: Types.DocumentFile[]
 ) => {
-  return documents.map((document) => {
-    if (!document.document) return null
+  return documents
+    .map((document) => {
+      if (!document.document) return null
 
-    // Doing the visitor thingie here for performance, even it could be done on each method
-    const visitor = new TypeScriptDocumentNodesVisitor(schema, document)
+      // Doing the visitor thingie here for performance, even it could be done on each method
+      const visitor = new TypeScriptDocumentNodesVisitor(schema, document)
 
-    const visitorNode = oldVisit(document.document, {
-      leave: visitor as any,
+      const visitorNode = oldVisit(document.document, {
+        leave: visitor as any,
+      })
+
+      visitor.validateDocument()
+
+      return [
+        buildQuery(visitor, visitorNode, document),
+        buildQueryIncludes(visitor),
+        buildMainType(visitor),
+        buildFields(visitor),
+        buildFieldsResolvers(visitor),
+        buildProjection(visitor),
+        buildHook(visitor),
+      ]
+        .filter(Boolean)
+        .join('\n\n')
     })
-
-    return [
-      buildQuery(visitor, visitorNode, document),
-      buildQueryIncludes(visitor),
-      buildMainType(visitor),
-      buildFields(visitor),
-      buildFieldsResolvers(visitor),
-      buildProjection(visitor),
-      buildHook(visitor),
-    ]
-      .filter(Boolean)
-      .join('\n\n')
-  })
+    .join('\n\n')
 }
 
 export const plugin: PluginFunction = async (
@@ -257,7 +263,7 @@ export const plugin: PluginFunction = async (
       STATIC_GENERATED_CODE,
       contentTypeScript,
       contentOperations,
-      ...customContent,
+      customContent,
     ]
       .filter(Boolean)
       .join('\n'),

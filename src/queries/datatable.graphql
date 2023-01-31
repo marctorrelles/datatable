@@ -1,3 +1,0 @@
-directive @dataField(id: String) on FIELD_DEFINITION
-
-directive @dataTable on OBJECT

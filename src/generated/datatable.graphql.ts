@@ -15,7 +15,7 @@ type RemoveArrayAndNull<T> = T extends Array<any>
 type RevealType<T extends string[], U> = T extends [infer First, ...infer Rest]
   ? Rest extends string[]
     ? First extends keyof U
-      ? RevealType<Rest, RemoveArrayAndNull<U[First]>>
+      ? RevealType<Rest, NonNullable<U[First]>>
       : never
     : never
   : U | null | undefined // TODO: Is this null or undefined assumption always true?
@@ -144,7 +144,7 @@ export type EmployeesDataTableQueryVariables = Exact<{ [key: string]: never; }>;
 export type EmployeesDataTableQuery = { __typename?: 'Query', employees?: Array<{ __typename?: 'Employee', access?: { __typename?: 'Access', lastName?: string | null, firstName?: string | null, email?: string | null } | null, company?: { __typename?: 'Company', name?: string | null } | null, subordinates?: Array<{ __typename?: 'Employee', access?: { __typename?: 'Access', firstName?: string | null, lastName?: string | null } | null }> | null, job?: { __typename?: 'Job', name?: string | null } | null }> | null };
 
 const EmployeesDataTableDocument = gql`
-query EmployeesDataTable($includeLastName: Boolean!, $includeFirstName: Boolean!, $includeEmail: Boolean!, $includeName: Boolean!, $includeName: Boolean!, $includeSubordinates: Boolean!) {
+query EmployeesDataTable($includeLastName: Boolean!, $includeFirstName: Boolean!, $includeEmail: Boolean!, $includeCompanyName: Boolean!, $includeJobName: Boolean!, $includeSubordinates: Boolean!) {
   employees {
     access {
       lastName @include(if: $includeLastName)
@@ -152,7 +152,7 @@ query EmployeesDataTable($includeLastName: Boolean!, $includeFirstName: Boolean!
       email @include(if: $includeEmail)
     }
     company {
-      name @include(if: $includeName)
+      name @include(if: $includeCompanyName)
     }
     subordinates @include(if: $includeSubordinates) {
       access {
@@ -161,7 +161,7 @@ query EmployeesDataTable($includeLastName: Boolean!, $includeFirstName: Boolean!
       }
     }
     job {
-      name @include(if: $includeName)
+      name @include(if: $includeJobName)
     }
   }
 }
@@ -171,8 +171,8 @@ const EmployeesDataTableIncludes = [
   'includeLastName',
   'includeFirstName',
   'includeEmail',
-  'includeName',
-  'includeName',
+  'includeCompanyName',
+  'includeJobName',
   'includeSubordinates',
 ] as const
 
@@ -181,9 +181,9 @@ type EmployeesDataTableMainType = RemoveArrayAndNull<
 >
 
 interface EmployeesDataTableFields {
-  accessLastName: RevealType<['access', 'lastName'], EmployeesDataTableMainType>
-  accessFirstName: RevealType<['access', 'firstName'], EmployeesDataTableMainType>
-  accessEmail: RevealType<['access', 'email'], EmployeesDataTableMainType>
+  lastName: RevealType<['access', 'lastName'], EmployeesDataTableMainType>
+  firstName: RevealType<['access', 'firstName'], EmployeesDataTableMainType>
+  email: RevealType<['access', 'email'], EmployeesDataTableMainType>
   companyName: RevealType<['company', 'name'], EmployeesDataTableMainType>
   jobName: RevealType<['job', 'name'], EmployeesDataTableMainType>
   subordinates: RevealType<['subordinates'], EmployeesDataTableMainType>
@@ -192,13 +192,13 @@ interface EmployeesDataTableFields {
 const EmployeesDataTableFieldsResolvers = {
   main: (data: EmployeesDataTableQuery) => data.employees,
   fields: {
-    accessLastName: (
+    lastName: (
       main: NonNullable<EmployeesDataTableQuery['employees']>[number]
     ) => main.access?.lastName,
-    accessFirstName: (
+    firstName: (
       main: NonNullable<EmployeesDataTableQuery['employees']>[number]
     ) => main.access?.firstName,
-    accessEmail: (
+    email: (
       main: NonNullable<EmployeesDataTableQuery['employees']>[number]
     ) => main.access?.email,
     companyName: (
@@ -213,7 +213,7 @@ const EmployeesDataTableFieldsResolvers = {
   }
 }
 
-export const employeesProjection = <F extends (keyof EmployeesDataTableFields)[]>(
+export const employeesDataTableProjection = <F extends (keyof EmployeesDataTableFields)[]>(
   args: ProjectionArgs<EmployeesDataTableFields, F>
 ) => projection<EmployeesDataTableFields>(args)
 

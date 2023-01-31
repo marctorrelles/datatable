@@ -1,11 +1,9 @@
-#import "./datatable.graphql"
-
 query EmployeesDataTable {
   employees @dataSource {
     access {
-      lastName @dataField(id: "accessLastName")
-      firstName @dataField(id: "accessFirstName")
-      email @dataField(id: "accessEmail")
+      lastName @dataField(id: "lastName")
+      firstName @dataField(id: "firstName")
+      email @dataField(id: "email")
     }
     company {
       name @dataField(id: "companyName")

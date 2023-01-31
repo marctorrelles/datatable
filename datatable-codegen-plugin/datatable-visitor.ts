@@ -70,7 +70,8 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
 
     autoBind(this)
     this.document = document
-    this.validateQuery()
+
+    this.validateDocument()
   }
 
   public OperationDefinition(node: OperationDefinitionNode) {
@@ -78,14 +79,14 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
       ...node,
       variableDefinitions: [
         ...(node.variableDefinitions?.map((el) => el) ?? []),
-        ...this.dataFields.map(({ field }) => {
+        ...this.dataFields.map(({ id }) => {
           return {
             kind: Kind.VARIABLE_DEFINITION,
             variable: {
               kind: Kind.VARIABLE,
               name: {
                 kind: Kind.NAME,
-                value: this.generateIncludeName(field),
+                value: this.generateIncludeName(id),
               },
             },
             type: {
@@ -150,8 +151,8 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
     return this.queryName.concat('Document')
   }
 
-  public generateIncludeName = ({ name }: FieldNode) => {
-    return `include${name.value[0].toUpperCase()}${name.value.slice(1)}`
+  public generateIncludeName = (id: string) => {
+    return `include${id[0].toUpperCase()}${id.slice(1)}`
   }
 
   public getDataFieldPath = (fieldId: string) => {
@@ -194,18 +195,32 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
     return [matchingNode, newPrev]
   }
 
-  private validateQuery = () => {
-    if ((this.document.document?.definitions || []).length > 1) {
+  validateDocument() {
+    const definitions = this.document.document?.definitions
+
+    if (!definitions || !definitions[0]) {
+      throw new Error('DataTable document is empty')
+    }
+
+    if ((definitions || []).length > 1) {
       throw new Error('DataTable queries only accept a single query')
     }
 
-    if (this.document.document?.definitions[0].kind !== 'OperationDefinition') {
+    if (definitions?.at(0)?.kind !== 'OperationDefinition') {
       throw new Error('Only OperationDefinition are accepted in DataTables')
     }
 
-    if (!this.document.document?.definitions[0].name) {
+    if (!('name' in definitions[0])) {
       throw new Error('Please, provide a name for your Query')
     }
+
+    // if (!this.dataSource) {
+    //   throw new Error('Please, provide a dataSource directive')
+    // }
+
+    // if (this.dataFields.length === 0) {
+    //   throw new Error('Please, provide at least one dataField directive')
+    // }
   }
 
   private transformDataFieldDirective = (
@@ -258,7 +273,7 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
             kind: Kind.VARIABLE,
             name: {
               kind: Kind.NAME,
-              value: this.generateIncludeName(selection),
+              value: this.generateIncludeName(idArgument.value.value),
             },
           },
         },
@@ -315,11 +330,6 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
     path: ReadonlyArray<string | number>,
     ancestors: ReadonlyArray<ASTNode | ReadonlyArray<ASTNode>>
   ) {
-    console.log({
-      field,
-      path,
-      ancestors,
-    })
     // Remove the Document and query from paths
     const newPath = path.slice(2)
     const newAncestors = ancestors.slice(2)

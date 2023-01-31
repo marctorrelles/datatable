@@ -1,15 +1,14 @@
 import React from 'react'
 import DataTable from '../DataTable'
 import {
-  employeesProjection,
+  employeesDataTableProjection,
   useEmployeesDataTable,
-} from '../datatable.graphql'
+} from '../generated/datatable.graphql'
 import { Employee } from '../generated/graphql'
 
-const Subordinates: React.FC<{ subordinates: Employee[] | null }> = ({
+const Subordinates: React.FC<{ subordinates?: Employee[] | null }> = ({
   subordinates,
 }) => {
-  console.log('subordinates', subordinates)
   if (!subordinates || subordinates.length === 0) return <span>None :'(</span>
 
   return (
@@ -23,35 +22,35 @@ const Subordinates: React.FC<{ subordinates: Employee[] | null }> = ({
 
 const NewEmployeesTable = () => {
   const data = useEmployeesDataTable([
-    employeesProjection({
+    employeesDataTableProjection({
       title: 'First Name',
       fields: ['firstName'],
       visible: false,
     }),
-    employeesProjection({
+    employeesDataTableProjection({
       title: 'Last Name',
       fields: ['lastName'],
       visible: false,
     }),
-    employeesProjection({
+    employeesDataTableProjection({
       title: 'Company',
       fields: ['companyName'],
     }),
-    employeesProjection({
+    employeesDataTableProjection({
       title: 'Full Name',
       fields: ['firstName', 'lastName'],
       render: ({ firstName, lastName }) => `${firstName} ${lastName}`,
     }),
-    employeesProjection({
+    employeesDataTableProjection({
       title: 'Position',
       fields: ['jobName'],
     }),
-    employeesProjection({
+    employeesDataTableProjection({
       title: 'Email',
       fields: ['email'],
       render: ({ email }) => email,
     }),
-    employeesProjection({
+    employeesDataTableProjection({
       title: 'Subordinates',
       fields: ['subordinates'],
       render: ({ subordinates }) => (

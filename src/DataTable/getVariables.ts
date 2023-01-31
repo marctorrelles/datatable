@@ -1,4 +1,4 @@
-import { Projection } from '../datatable.graphql'
+import { Projection } from '../generated/datatable.graphql'
 
 export const getVariables = <T>(
   queryIncludesArray: string[] | readonly string[],
