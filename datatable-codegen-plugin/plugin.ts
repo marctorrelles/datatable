@@ -26,7 +26,7 @@ type RevealType<T extends string[], U> = T extends [infer First, ...infer Rest]
     : never
   : U | null | undefined // TODO: Is this null or undefined assumption always true?
 
-type DataTableData<T> = {
+export type DataTableData<T> = {
   getVariables: (args: any) => AnyVariables
   query: any
   projections: Projection<T>[]
@@ -125,7 +125,7 @@ function buildQueryIncludes(visitor: TypeScriptDocumentNodesVisitor) {
 }
 
 const buildMainType = (visitor: TypeScriptDocumentNodesVisitor) => {
-  const generic = visitor.mainFieldTree.reduce((prev, current) => {
+  const generic = visitor.dataSource.fullPath.reduce((prev, current) => {
     const currentString = `['${current}']`
 
     if (prev.length) {
@@ -141,9 +141,10 @@ const buildMainType = (visitor: TypeScriptDocumentNodesVisitor) => {
 
 const buildFields = (visitor: TypeScriptDocumentNodesVisitor) => {
   return `interface ${visitor.queryName}Fields {
-  ${visitor.fieldsTrees
-    .map((fieldStrings, index) => {
-      return `${visitor.dataFields[index].id}: RevealType<[${fieldStrings
+  ${visitor.dataFields
+    .map((field) => {
+      return `${field.id}: RevealType<[${visitor
+        .getDataFieldPath(field.id)
         .map((field) => `'${field}'`)
         .join(', ')}], ${visitor.queryName}MainType>`
     })
@@ -158,20 +159,22 @@ const buildProjection = (visitor: TypeScriptDocumentNodesVisitor) => {
 }
 
 const buildFieldsResolvers = (visitor: TypeScriptDocumentNodesVisitor) => {
-  const mainArg = `NonNullable<${visitor.queryName}Query[${visitor.mainFieldTree
+  const mainArg = `NonNullable<${
+    visitor.queryName
+  }Query[${visitor.dataSource.fullPath
     .map((f) => `'${f}'`)
     .join(', ')}]>[number]`
 
   return `const EmployeesDataTableFieldsResolvers = {
-  main: (data: ${visitor.queryName}Query) => data.${visitor.mainFieldTree.join(
-    '.'
-  )},
+  main: (data: ${
+    visitor.queryName
+  }Query) => data.${visitor.dataSource.fullPath.join('.')},
   fields: {
-${visitor.fieldsTrees
-  .map((field, index) => {
-    return `    ${visitor.dataFields[index].id}: (
+${visitor.dataFields
+  .map(({ id }) => {
+    return `    ${id}: (
       main: ${mainArg}
-    ) => main.${field.join('?.')},`
+    ) => main.${visitor.getDataFieldPath(id).join('?.')},`
   })
   .join('\n')}
   }

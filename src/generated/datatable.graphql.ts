@@ -20,7 +20,7 @@ type RevealType<T extends string[], U> = T extends [infer First, ...infer Rest]
     : never
   : U | null | undefined // TODO: Is this null or undefined assumption always true?
 
-type DataTableData<T> = {
+export type DataTableData<T> = {
   getVariables: (args: any) => AnyVariables
   query: any
   projections: Projection<T>[]
@@ -181,10 +181,10 @@ type EmployeesDataTableMainType = RemoveArrayAndNull<
 >
 
 interface EmployeesDataTableFields {
-  accessLastName: RevealType<['subordinates', 'access', 'lastName'], EmployeesDataTableMainType>
-  accessFirstName: RevealType<['subordinates', 'access', 'firstName'], EmployeesDataTableMainType>
+  accessLastName: RevealType<['access', 'lastName'], EmployeesDataTableMainType>
+  accessFirstName: RevealType<['access', 'firstName'], EmployeesDataTableMainType>
   accessEmail: RevealType<['access', 'email'], EmployeesDataTableMainType>
-  companyName: RevealType<['job', 'name'], EmployeesDataTableMainType>
+  companyName: RevealType<['company', 'name'], EmployeesDataTableMainType>
   jobName: RevealType<['job', 'name'], EmployeesDataTableMainType>
   subordinates: RevealType<['subordinates'], EmployeesDataTableMainType>
 }
@@ -194,16 +194,16 @@ const EmployeesDataTableFieldsResolvers = {
   fields: {
     accessLastName: (
       main: NonNullable<EmployeesDataTableQuery['employees']>[number]
-    ) => main.subordinates?.access?.lastName,
+    ) => main.access?.lastName,
     accessFirstName: (
       main: NonNullable<EmployeesDataTableQuery['employees']>[number]
-    ) => main.subordinates?.access?.firstName,
+    ) => main.access?.firstName,
     accessEmail: (
       main: NonNullable<EmployeesDataTableQuery['employees']>[number]
     ) => main.access?.email,
     companyName: (
       main: NonNullable<EmployeesDataTableQuery['employees']>[number]
-    ) => main.job?.name,
+    ) => main.company?.name,
     jobName: (
       main: NonNullable<EmployeesDataTableQuery['employees']>[number]
     ) => main.job?.name,

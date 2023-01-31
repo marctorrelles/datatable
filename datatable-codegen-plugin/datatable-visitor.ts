@@ -33,7 +33,6 @@ import {
   Kind,
   OperationDefinitionNode,
   SelectionNode,
-  SelectionSetNode,
   VariableDefinitionNode,
 } from 'graphql'
 
@@ -45,7 +44,7 @@ interface TypeScriptDocumentNodesVisitorPluginConfig
 type DataField = {
   id: string
   field: FieldNode
-  parent: ASTNode | ASTNode[] | undefined
+  fullPath: string[]
 }
 
 export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
@@ -106,18 +105,29 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
     return JSON.stringify(newNode)
   }
 
+  // TODO: We could do this also on "Field" instead of "SelectionSet", would be much easier
   public SelectionSet(
     node: ASTNode,
     _key: string | number | undefined,
-    parent: ASTNode | ASTNode[] | undefined
+    _parent: ASTNode | ASTNode[] | undefined,
+    path: ReadonlyArray<string | number>,
+    ancestors: ReadonlyArray<ASTNode | ReadonlyArray<ASTNode>>
   ) {
     if (node.kind !== Kind.SELECTION_SET) return
 
     const newSelections = node.selections.map((selection) => {
       let newSelection = selection
 
-      newSelection = this.transformDataFieldDirective(selection, parent)
-      newSelection = this.removeDataSourceDirective(newSelection, parent)
+      newSelection = this.transformDataFieldDirective(
+        selection,
+        path,
+        ancestors
+      )
+      newSelection = this.removeDataSourceDirective(
+        newSelection,
+        path,
+        ancestors
+      )
 
       return newSelection
     })
@@ -140,30 +150,15 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
     return this.queryName.concat('Document')
   }
 
-  get mainFieldTree() {
-    const [, tree] = this.traverseUntilNode(
-      this.mainOperation.selectionSet.selections,
-      this.dataSource.field
-    )
-
-    return tree
-      .map((el) => el.kind === Kind.FIELD && el.name.value)
-      .filter(Boolean) as string[]
-  }
-
-  get fieldsTrees() {
-    return this.dataFields.map(({ field }) => {
-      const [, tree] = this.traverseUntilNode([this.dataSource.field], field)
-
-      return tree
-        .map((el) => el.kind === Kind.FIELD && el.name.value)
-        .filter(Boolean)
-        .slice(1) as string[]
-    })
-  }
-
   public generateIncludeName = ({ name }: FieldNode) => {
     return `include${name.value[0].toUpperCase()}${name.value.slice(1)}`
+  }
+
+  public getDataFieldPath = (fieldId: string) => {
+    const field = this.dataFields.find((el) => el.id === fieldId)
+    if (!field) throw new Error(`Field ${fieldId} not found`)
+
+    return field.fullPath.slice(this.dataSource.fullPath.length)
   }
 
   private traverseUntilNode = (
@@ -215,7 +210,8 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
 
   private transformDataFieldDirective = (
     selection: SelectionNode,
-    parent: ASTNode | ASTNode[] | undefined
+    path: ReadonlyArray<string | number>,
+    ancestors: ReadonlyArray<ASTNode | ReadonlyArray<ASTNode>>
   ): SelectionNode => {
     if (!selection.directives) return selection
 
@@ -242,7 +238,7 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
     this.dataFields.push({
       id: idArgument.value.value,
       field: selection,
-      parent,
+      fullPath: this.getPath(selection, path, ancestors),
     })
 
     const newDirective: DirectiveNode = {
@@ -280,7 +276,8 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
 
   private removeDataSourceDirective = (
     selection: SelectionNode,
-    parent: ASTNode | ASTNode[] | undefined
+    path: ReadonlyArray<string | number>,
+    ancestors: ReadonlyArray<ASTNode | ReadonlyArray<ASTNode>>
   ) => {
     if (!selection.directives) return selection
 
@@ -297,7 +294,7 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
     if (!this.dataSource) {
       this.dataSource = {
         field: selection,
-        parent,
+        fullPath: this.getPath(selection, path, ancestors),
       }
     } else {
       throw new Error(
@@ -311,5 +308,30 @@ export class TypeScriptDocumentNodesVisitor extends ClientSideBaseVisitor<
         (d) => d.name.value !== 'dataSource'
       ),
     }
+  }
+
+  private getPath(
+    field: FieldNode,
+    path: ReadonlyArray<string | number>,
+    ancestors: ReadonlyArray<ASTNode | ReadonlyArray<ASTNode>>
+  ) {
+    console.log({
+      field,
+      path,
+      ancestors,
+    })
+    // Remove the Document and query from paths
+    const newPath = path.slice(2)
+    const newAncestors = ancestors.slice(2)
+
+    const fullPath = newPath
+      .map(
+        (value, index) => (newAncestors.at(index) as any)?.[value]?.name?.value
+      )
+      .filter(Boolean)
+
+    fullPath.push(field.name.value)
+
+    return fullPath
   }
 }
