@@ -48,7 +48,6 @@ const NewEmployeesTable = () => {
     employeesDataTableProjection({
       title: 'Email',
       fields: ['email'],
-      render: ({ email }) => email,
     }),
     employeesDataTableProjection({
       title: 'Subordinates',
